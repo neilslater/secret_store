@@ -5,3 +5,5 @@ gem 'bundler'
 gem 'rspec'
 gem 'rake'
 gem 'thor'
+gem 'bcrypt', '>=3.1.11'
+
