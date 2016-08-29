@@ -17,6 +17,19 @@ describe SecretStore::Secret do
       end
     end
 
+    describe "#from_h" do
+      it "creates valid, decryptable object from hash-based serialisation" do
+        h = Hash[
+          :label => example_label,
+          :iv => example_iv,
+          :pbkdf2_salt => example_pbkdf2_salt,
+          :crypted_text => example_crypted_text
+        ]
+        secret = SecretStore::Secret.from_h( h )
+        expect( secret.decrypt_text( example_password ) ).to eql example_plaintext
+      end
+    end
+
     describe "#create_from_plaintext" do
       it "creates valid, decryptable object" do
         secret = SecretStore::Secret.create_from_plaintext( example_label, example_plaintext, example_password )
@@ -65,6 +78,14 @@ describe SecretStore::Secret do
           }.to raise_error OpenSSL::Cipher::CipherError
         end
       end
+
+      it "does not change iv, pbkdf2_salt, or crypted text" do
+        expect( subject.decrypt_text( example_password ) ).to eql example_plaintext
+
+        expect( subject.iv ).to eql example_iv
+        expect( subject.pbkdf2_salt ).to eql example_pbkdf2_salt
+        expect( subject.crypted_text ).to eql example_crypted_text
+      end
     end
 
     describe "#replace_text" do
@@ -74,7 +95,7 @@ describe SecretStore::Secret do
         expect( subject.decrypt_text( example_password ) ).to eql new_message
       end
 
-      it "works using a new key" do
+      it "works using a new password" do
         new_message = 'Another different secret!'
         new_password = 'thing'
         subject.replace_text( new_message, new_password )
@@ -88,6 +109,18 @@ describe SecretStore::Secret do
         expect( subject.iv ).to_not eql example_iv
         expect( subject.pbkdf2_salt ).to_not eql example_pbkdf2_salt
         expect( subject.crypted_text ).to_not eql example_crypted_text
+      end
+    end
+
+    describe "#to_h" do
+      it "serialises the object" do
+        h = subject.to_h
+        secret = SecretStore::Secret.from_h( h )
+        expect( secret.decrypt_text( example_password ) ).to eql example_plaintext
+        expect( subject.label ).to eql example_label
+        expect( subject.iv ).to eql example_iv
+        expect( subject.pbkdf2_salt ).to eql example_pbkdf2_salt
+        expect( subject.crypted_text ).to eql example_crypted_text
       end
     end
   end

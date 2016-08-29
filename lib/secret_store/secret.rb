@@ -34,8 +34,8 @@ module SecretStore
       cipher.update( ciphertext ) + cipher.final
     end
 
-    def key_from_password passwd, salt
-      OpenSSL::PKCS5.pbkdf2_hmac( passwd, salt,
+    def key_from_password password, salt
+      OpenSSL::PKCS5.pbkdf2_hmac( password, salt,
                                   PBKDF_ITERATIONS, KEY_LENGTH,
                                   OpenSSL::Digest::SHA256.new )
     end
@@ -72,6 +72,25 @@ module SecretStore
       @pbkdf2_salt = encode_bytes( SecureRandom.random_bytes(16) )
       key = key_from_password( password, decode_bytes(pbkdf2_salt) )
       @crypted_text = encode_bytes( encrypt_string( new_plaintext, key, decode_bytes( iv ) ) )
+    end
+
+    def to_h
+      Hash[
+        :label => @label,
+        :iv => @iv,
+        :pbkdf2_salt => @pbkdf2_salt,
+        :crypted_text => @crypted_text
+      ]
+    end
+
+    def self.from_h h
+      [:label, :iv, :pbkdf2_salt, :crypted_text].each do |property|
+        unless h.has_key? property
+          raise "Missing hash key #{property}"
+        end
+      end
+
+      self.new( h[:label], h[:iv], h[:pbkdf2_salt], h[:crypted_text] )
     end
   end
 end
