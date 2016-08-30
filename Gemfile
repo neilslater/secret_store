@@ -6,4 +6,4 @@ gem 'rspec'
 gem 'rake'
 gem 'thor'
 gem 'bcrypt', '>=3.1.11'
-
+gem 'sqlite3', '>=1.3.11'
