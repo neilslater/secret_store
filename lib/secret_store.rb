@@ -6,4 +6,5 @@ require "secret_store/password"
 require "secret_store/store"
 
 module SecretStore
+
 end

@@ -1,5 +1,7 @@
 # SecretStore
 
+[![Build Status](https://travis-ci.org/neilslater/secret_store.png?branch=master)](http://travis-ci.org/neilslater/secret_store)
+
 Ruby project for storing small secrets accessed with a master password, using standard cryptgraphic components.
 
 ## Usage

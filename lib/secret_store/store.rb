@@ -66,7 +66,7 @@ module SecretStore
       SQL
 
       db.execute <<-SQL
-        CREATE TABLE secret (
+        CREATE TABLE IF NOT EXISTS secret (
         label VARCHAR(50) PRIMARY KEY,
         iv VARCHAR(20) NOT NULL,
         pbkdf2_salt VARCHAR(20) NOT NULL,
