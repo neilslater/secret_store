@@ -34,8 +34,10 @@ describe SecretStore::Store do
 
     describe "#save_password" do
       it "writes password data to database" do
+        sql = 'SELECT count(*) FROM master_password'
+        expect( subject.db.execute(sql).first ).to eql [0]
         subject.save_password example_password
-        expect( subject.db.)
+        expect( subject.db.execute(sql).first ).to eql [1]
       end
     end
 
