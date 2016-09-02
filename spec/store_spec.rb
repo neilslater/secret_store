@@ -9,6 +9,11 @@ describe SecretStore::Store do
   }
   let(:example_plaintext_1) { 'This is a secret!' }
 
+  let(:example_secret_2) {
+    SecretStore::Secret.new( 'second', 'ImaXJ_i8aWxPRXw9LmC8kQ==', '_GjzDCahPOhW5xW27h89oQ==', 'ZLBiEo7llBb1m9h9mrGxtEmGtXWLzog0u2td2Cp1bjk=')
+  }
+  let(:example_plaintext_2) { 'This is a second secret!' }
+
   describe "class methods" do
     describe "#new" do
       it "creates valid store from scratch" do
@@ -33,11 +38,20 @@ describe SecretStore::Store do
     subject { SecretStore::Store.new( ':memory:' ) }
 
     describe "#save_password" do
+      def db_num_passwords
+        subject.db.execute('SELECT count(*) FROM master_password').first.first
+      end
+
       it "writes password data to database" do
-        sql = 'SELECT count(*) FROM master_password'
-        expect( subject.db.execute(sql).first ).to eql [0]
+        expect( db_num_passwords ).to eql 0
         subject.save_password example_password
-        expect( subject.db.execute(sql).first ).to eql [1]
+        expect( db_num_passwords ).to eql 1
+      end
+
+      it "is idempotent" do
+        expect( db_num_passwords ).to eql 0
+        5.times { subject.save_password example_password }
+        expect( db_num_passwords ).to eql 1
       end
     end
 
@@ -48,7 +62,29 @@ describe SecretStore::Store do
     end
 
     describe "#save_secret" do
+      def db_num_secrets
+        subject.db.execute('SELECT count(*) FROM secret').first.first
+      end
 
+      it "adds new secret to database" do
+        expect( db_num_secrets ).to eql 0
+        subject.save_secret( example_secret_1 )
+        expect( db_num_secrets ).to eql 1
+      end
+
+      it "is idempotent" do
+        expect( db_num_secrets ).to eql 0
+        5.times { subject.save_secret( example_secret_1 ) }
+        expect( db_num_secrets ).to eql 1
+      end
+
+      it "adds new serets indexed by the label" do
+        expect( db_num_secrets ).to eql 0
+        subject.save_secret( example_secret_1 )
+        expect( db_num_secrets ).to eql 1
+        subject.save_secret( example_secret_2 )
+        expect( db_num_secrets ).to eql 2
+      end
     end
 
     describe "#load_secret" do
@@ -56,6 +92,19 @@ describe SecretStore::Store do
         expect( subject.load_secret('example') ).to be_nil
         subject.save_secret( example_secret_1 )
         expect( subject.load_secret('anything_else') ).to be_nil
+      end
+
+      it "returns a new valid secret when extracted by label" do
+        subject.save_secret( example_secret_1 )
+        subject.save_secret( example_secret_2 )
+
+        first_secret = subject.load_secret('example')
+        expect( first_secret ).to be_a SecretStore::Secret
+        expect( first_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_1
+
+        second_secret = subject.load_secret('second')
+        expect( second_secret ).to be_a SecretStore::Secret
+        expect( second_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_2
       end
     end
   end
