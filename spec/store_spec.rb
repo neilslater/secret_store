@@ -161,5 +161,29 @@ describe SecretStore::Store do
         ]
       end
     end
+
+    describe "#all_secrets" do
+      it "returns empty array when there are no secrets in the store" do
+        expect( subject.all_secrets ).to be_empty
+      end
+
+      it "returns array of all secrets in the store" do
+        subject.save_secret( example_secret_1 )
+        subject.save_secret( example_secret_2 )
+
+        got_secrets = subject.all_secrets
+        expect( got_secrets.count ).to eql 2
+
+        got_secrets.sort_by!(&:label)
+
+        first_secret = got_secrets.first
+        expect( first_secret ).to be_a SecretStore::Secret
+        expect( first_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_1
+
+        second_secret = got_secrets.last
+        expect( second_secret ).to be_a SecretStore::Secret
+        expect( second_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_2
+      end
+    end
   end
 end

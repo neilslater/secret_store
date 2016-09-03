@@ -79,14 +79,14 @@ module SecretStore
       store
     end
 
-    private
-
     def all_secrets
       records = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text FROM secret' )
       records.map do |record|
         SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text] )
       end
     end
+
+    private
 
     def hash_to_array hash, keys
       keys.map { |k| hash[k] }
