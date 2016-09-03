@@ -1,4 +1,6 @@
 require 'spec_helper'
+require 'fileutils'
+require 'tempfile'
 
 describe SecretStore::Store do
   let(:example_password_text) { 'hidden' }
@@ -32,6 +34,22 @@ describe SecretStore::Store do
         expect( secret.decrypt_text(example_password_text)).to eql example_plaintext_1
       end
     end
+
+    describe "#import_yaml" do
+      let(:yaml_fixture) { File.join( File.dirname(__FILE__), 'fixture_store.yml' ) }
+
+      it "creates a new store" do
+        store = SecretStore::Store.import_yaml( yaml_fixture, ':memory:' )
+        expect( store ).to be_a SecretStore::Store
+      end
+
+      it "imports data correctly" do
+        store = SecretStore::Store.import_yaml( yaml_fixture, ':memory:' )
+        expect( store.load_password.matches(example_password_text) ).to be true
+        expect( store.load_secret('example').to_h ).to eql example_secret_1.to_h
+        expect( store.load_secret('second').to_h ).to eql example_secret_2.to_h
+      end
+    end
   end
 
   describe "instance methods" do
@@ -58,6 +76,12 @@ describe SecretStore::Store do
     describe "#load_password" do
       it "returns nil when there is no password" do
         expect( subject.load_password ).to be_nil
+      end
+
+      it "returns password data when there is one" do
+        subject.save_password example_password
+        pw_from_store = subject.load_password
+        expect( pw_from_store.to_h ).to eql example_password.to_h
       end
     end
 
@@ -105,6 +129,36 @@ describe SecretStore::Store do
         second_secret = subject.load_secret('second')
         expect( second_secret ).to be_a SecretStore::Secret
         expect( second_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_2
+      end
+    end
+
+    describe "#export_yaml" do
+      before :each do
+        @yaml_file = Tempfile.new('secret_store_test.yml').path
+        @store = SecretStore::Store.new( File.join( File.dirname(__FILE__), 'fixture_store.dat' ) )
+      end
+
+      before :each do
+        if File.exists?( @yaml_file )
+          FileUtils.rm @yaml_file
+        end
+      end
+
+      it "writes a file" do
+        @store.export_yaml( @yaml_file )
+        expect( File.size?(@yaml_file) ).to be > 200
+      end
+
+      it "saves YAML data to the file" do
+        @store.export_yaml( @yaml_file )
+        exported_data = YAML.load( File.read( @yaml_file ) )
+        expect( exported_data ).to eql Hash[
+          :master_password => Hash[:hashed_password=>"$2a$14$NTX58QPd9L5urBmcmPEhS..i1HX0B.REpxGZblv5K5W02/97ghmtm"],
+          :secrets => [
+            Hash[:label=>"example", :iv=>"UbJdZhd4MQQTvFf9OB3W6A==", :pbkdf2_salt=>"mHv4-vrSLVpXMDmra6k-fg==",
+                 :crypted_text=>"ZsjUIqTfvEaJok25n-kuwMi5lwOgYgZ3yyBai2lJEzA="]
+          ]
+        ]
       end
     end
   end

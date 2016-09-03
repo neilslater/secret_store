@@ -1,4 +1,5 @@
 require 'sqlite3'
+require 'yaml'
 
 module SecretStore
   class Store
@@ -48,7 +49,44 @@ module SecretStore
       end
     end
 
+    def export_yaml yaml_file
+      pw = load_password
+      secrets = all_secrets
+      all_data = Hash[
+        :master_password => pw.to_h,
+        :secrets => secrets.map { |s| s.to_h }
+      ]
+
+      File.open( yaml_file, 'wb' ) { |f| f.puts YAML.dump( all_data ) }
+    end
+
+    def self.import_yaml yaml_file, db_connect
+      store = self.new( db_connect )
+      all_data = YAML.load( File.read( yaml_file ) )
+
+      if pw_hash = all_data[:master_password]
+        pw = SecretStore::Password.from_h( pw_hash  )
+        store.save_password pw
+      end
+
+      if secret_hashes = all_data[:secrets]
+        secret_hashes.each do |secret_hash|
+          secret = SecretStore::Secret.from_h( secret_hash )
+          store.save_secret secret
+        end
+      end
+
+      store
+    end
+
     private
+
+    def all_secrets
+      records = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text FROM secret' )
+      records.map do |record|
+        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text] )
+      end
+    end
 
     def hash_to_array hash, keys
       keys.map { |k| hash[k] }
