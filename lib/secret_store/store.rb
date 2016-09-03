@@ -49,6 +49,10 @@ module SecretStore
       end
     end
 
+    def delete_secret label
+      db.execute( 'DELETE FROM secret WHERE label = ?', [label] )
+    end
+
     def export_yaml yaml_file
       pw = load_password
       secrets = all_secrets

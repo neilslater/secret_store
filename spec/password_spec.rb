@@ -20,6 +20,17 @@ describe SecretStore::Password do
       end
     end
 
+    describe "#create" do
+      it "creates new object" do
+        expect( SecretStore::Password.create( 'super-secret' ) ).to be_a SecretStore::Password
+      end
+
+      it "matches to original password" do
+        pw = SecretStore::Password.create( 'super-secret' )
+        expect( pw.matches( 'super-secret') ).to be true
+      end
+    end
+
     describe "#from_h" do
       it "creates valid object from serialisation" do
         h = Hash[ :hashed_password => example_password_hash ]

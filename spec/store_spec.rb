@@ -55,11 +55,15 @@ describe SecretStore::Store do
   describe "instance methods" do
     subject { SecretStore::Store.new( ':memory:' ) }
 
-    describe "#save_password" do
-      def db_num_passwords
-        subject.db.execute('SELECT count(*) FROM master_password').first.first
-      end
+    def db_num_secrets
+      subject.db.execute('SELECT count(*) FROM secret').first.first
+    end
 
+    def db_num_passwords
+      subject.db.execute('SELECT count(*) FROM master_password').first.first
+    end
+
+    describe "#save_password" do
       it "writes password data to database" do
         expect( db_num_passwords ).to eql 0
         subject.save_password example_password
@@ -86,10 +90,6 @@ describe SecretStore::Store do
     end
 
     describe "#save_secret" do
-      def db_num_secrets
-        subject.db.execute('SELECT count(*) FROM secret').first.first
-      end
-
       it "adds new secret to database" do
         expect( db_num_secrets ).to eql 0
         subject.save_secret( example_secret_1 )
@@ -125,6 +125,40 @@ describe SecretStore::Store do
         first_secret = subject.load_secret('example')
         expect( first_secret ).to be_a SecretStore::Secret
         expect( first_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_1
+
+        second_secret = subject.load_secret('second')
+        expect( second_secret ).to be_a SecretStore::Secret
+        expect( second_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_2
+      end
+    end
+
+    describe "#delete_secret" do
+      before :each do
+        subject.save_secret( example_secret_1 )
+        subject.save_secret( example_secret_2 )
+      end
+
+      it "makes no difference when there is no matching label" do
+        subject.delete_secret('qwerty')
+
+        expect( db_num_secrets ).to eql 2
+
+        first_secret = subject.load_secret('example')
+        expect( first_secret ).to be_a SecretStore::Secret
+        expect( first_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_1
+
+        second_secret = subject.load_secret('second')
+        expect( second_secret ).to be_a SecretStore::Secret
+        expect( second_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_2
+      end
+
+      it "removes an existing secret without affecting others" do
+        subject.delete_secret('example')
+
+        expect( db_num_secrets ).to eql 1
+
+        first_secret = subject.load_secret('example')
+        expect( first_secret ).to be_nil
 
         second_secret = subject.load_secret('second')
         expect( second_secret ).to be_a SecretStore::Secret
@@ -174,15 +208,11 @@ describe SecretStore::Store do
         got_secrets = subject.all_secrets
         expect( got_secrets.count ).to eql 2
 
-        got_secrets.sort_by!(&:label)
-
-        first_secret = got_secrets.first
-        expect( first_secret ).to be_a SecretStore::Secret
-        expect( first_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_1
-
-        second_secret = got_secrets.last
-        expect( second_secret ).to be_a SecretStore::Secret
-        expect( second_secret.decrypt_text( example_password_text ) ).to eql example_plaintext_2
+        expected_plaintexts = [ example_plaintext_1, example_plaintext_2 ]
+        got_secrets.sort_by(&:label).zip( expected_plaintexts ).each do |secret, plaintext|
+          expect( secret ).to be_a SecretStore::Secret
+          expect( secret.decrypt_text( example_password_text ) ).to eql plaintext
+        end
       end
     end
   end
