@@ -1,14 +1,19 @@
 #!/usr/bin/env ruby
-
-require "bundler/setup"
 require "secret_store"
-
-# You can add fixtures and/or initialization code here to make experimenting
-# with your gem easier. You can also use a different console, if you like.
-
-# (If you use this, don't forget to add pry to your Gemfile!)
-# require "pry"
-# Pry.start
-
 require "irb"
+require 'io/console'
+
+extend SecretStore
+
+secrets_file = ARGV.first || default_secrets_file
+
+connect_secret_store( secrets_file )
+
+puts "Connected. Methods available:"
+puts "  read_secret [label]"
+puts "  write_secret [label], [content]"
+puts "  delete_secret [label]"
+puts "  all_secret_labels"
+puts "  change_password"
+
 IRB.start
