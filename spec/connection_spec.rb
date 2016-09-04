@@ -1,12 +1,5 @@
 require 'spec_helper'
 
-# Monkey patch for test purposes
-class SecretStore::Connection
-  def test_store
-    @store
-  end
-end
-
 describe SecretStore::Connection do
   let(:example_password) { 'hidden' }
   let(:example_plaintext_1) { 'This is a secret!' }
@@ -49,7 +42,7 @@ describe SecretStore::Connection do
 
       it "allows a new password on a new blank store" do
         connection = SecretStore::Connection.load( ':memory:', 'another-password' )
-        expect( connection.test_store.load_password.matches( 'another-password') ).to be true
+        expect( connection.store.load_password.matches( 'another-password') ).to be true
       end
     end
 
@@ -77,7 +70,7 @@ describe SecretStore::Connection do
 
     describe "#write_secret" do
       it "adds a new secret to the database, if the label is new" do
-        db = subject.test_store.db
+        db = subject.store.db
         expect {
           subject.write_secret 'new_label', 'New message'
         }.to change { num_secrets_in(db) }.by 1
@@ -85,15 +78,15 @@ describe SecretStore::Connection do
 
       it "adds the new secret so that it can be decrypted" do
         subject.write_secret 'new_label', 'New message'
-        expect( subject.test_store.load_secret('new_label').decrypt_text(example_password) ).to eql 'New message'
+        expect( subject.store.load_secret('new_label').decrypt_text(example_password) ).to eql 'New message'
       end
 
       it "over-writes an existing secret" do
-        expect( subject.test_store.load_secret('example').decrypt_text(example_password) ).to eql example_plaintext_1
+        expect( subject.store.load_secret('example').decrypt_text(example_password) ).to eql example_plaintext_1
         subject.write_secret 'example', 'New message'
-        expect( subject.test_store.load_secret('example').decrypt_text(example_password) ).to eql 'New message'
+        expect( subject.store.load_secret('example').decrypt_text(example_password) ).to eql 'New message'
 
-        db = subject.test_store.db
+        db = subject.store.db
         expect( num_secrets_in(db) ).to eql 2
       end
     end
@@ -113,11 +106,30 @@ describe SecretStore::Connection do
       end
     end
 
-    describe "all_secret_labels" do
+    describe "#all_secret_labels" do
       it "lists all known labels" do
         expect( subject.all_secret_labels ).to match_array %w(example second)
         subject.write_secret 'third', 'Third secret message'
         expect( subject.all_secret_labels ).to match_array %w(example second third)
+      end
+    end
+
+    describe "#change_password" do
+      it "still allows reading current secrets" do
+        subject.change_password 'super-secret'
+        expect( subject.read_secret('example') ).to eql example_plaintext_1
+        expect( subject.read_secret('second') ).to eql example_plaintext_2
+      end
+
+      it "changes connection password required when connecting to the store again" do
+        subject.change_password 'super-secret'
+        expect {
+          SecretStore::Connection.new( subject.store, example_password )
+        }.to raise_error RuntimeError, /password/
+
+        copy_connection = SecretStore::Connection.new( subject.store, 'super-secret' )
+        expect( copy_connection.read_secret('example') ).to eql example_plaintext_1
+        expect( copy_connection.read_secret('second') ).to eql example_plaintext_2
       end
     end
   end

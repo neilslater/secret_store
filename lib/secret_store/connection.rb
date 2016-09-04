@@ -1,5 +1,7 @@
 module SecretStore
   class Connection
+    attr_reader :store
+
     def initialize store, password
       unless store.is_a? SecretStore::Store
         raise "Expected a SecretStore::Store, got #{store.inspect}"
@@ -56,10 +58,6 @@ module SecretStore
     end
 
     private
-
-    def store
-      @store
-    end
 
     def password
       @password
