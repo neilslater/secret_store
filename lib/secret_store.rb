@@ -11,6 +11,10 @@ module SecretStore
     ENV['SECRET_STORE_FILE'] || File.join( ENV['HOME'], 'secrets.sqlite3.dat' )
   end
 
+  def default_backup_file
+    ENV['SECRET_EXPORT_FILE'] || File.join( ENV['HOME'], 'secrets_export.yml' )
+  end
+
   def connect_secret_store secrets_file
     print "Password: "
     password = STDIN.noecho(&:gets).chomp
@@ -18,16 +22,22 @@ module SecretStore
     @connection = SecretStore::Connection.load( secrets_file, password )
   end
 
+  def export_secrets
+    filename = default_backup_file
+    @connection.store.export_yaml filename
+    filename
+  end
+
   def write_secret label, content
-    @connection.write_secret label, content
+    @connection.write_secret label.to_s, content
   end
 
   def read_secret label
-    @connection.read_secret label
+    @connection.read_secret label.to_s
   end
 
   def delete_secret label
-    @connection.delete_secret label
+    @connection.delete_secret label.to_s
   end
 
   def all_secret_labels

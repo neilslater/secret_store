@@ -7,6 +7,8 @@ extend SecretStore
 
 secrets_file = ARGV.first || default_secrets_file
 
+puts "Connecting to #{secrets_file}."
+
 connect_secret_store( secrets_file )
 
 puts "Connected. Methods available:"
@@ -15,5 +17,6 @@ puts "  write_secret [label], [content]"
 puts "  delete_secret [label]"
 puts "  all_secret_labels"
 puts "  change_password"
+puts "  export_secrets"
 
 IRB.start
