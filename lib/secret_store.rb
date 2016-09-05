@@ -7,7 +7,9 @@ require "secret_store/password"
 require "secret_store/store"
 require "secret_store/connection"
 
-# Top-level methods in this module are imported into main Object in the console application.
+# Top-level methods in this module are imported into main Object in the console application. They
+# are all based on creating and using a SecretStore::Connection object for accessing and managing
+# the store and its contents.
 #
 # @example Getting a secret
 #  read_secret 'google'
