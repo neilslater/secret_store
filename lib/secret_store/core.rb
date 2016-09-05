@@ -4,10 +4,11 @@ require 'base64'
 
 module SecretStore
   # This module contains the logic for all encoding and encrypting performed by the rest of the
-  # project.
+  # project. Internally, encryption is provided by OpenSSL. There are no cryptography algorithms implemented
+  # here (or elsewhere in SecretStore)
   #
   module CoreMethods
-    # Cipher type used from possible
+    # Cipher type selected from possible choices in OpenSSL
     CIPHER_TYPE = 'aes-256-cbc'
 
     # Key length in bytes of key used by chosen cipher
