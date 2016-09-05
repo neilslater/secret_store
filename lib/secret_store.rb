@@ -10,8 +10,8 @@ require "secret_store/connection"
 # Top-level methods in this module are imported into main Object in the console application.
 #
 # @example Getting a secret
-#  read_secret 'my_label'
-#  # => "Plaintext value of the secret."
+#  read_secret 'google'
+#  # => "my_google_password"
 #
 module SecretStore
   # Default SQLite 3 database file name, based on SECRET_STORE_FILE environment variable if it is

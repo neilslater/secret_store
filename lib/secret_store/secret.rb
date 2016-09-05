@@ -69,7 +69,7 @@ module SecretStore
     # same or different to original one. The salt for key derivation and initial value for encryption
     # are re-generated automatically using SecureRandom (so even if password and message are identical
     # to original, the encryption will be different)
-    # @param [String] new_text plaintext version of new message
+    # @param [String] new_plaintext plaintext version of new message
     # @param [String] password plaintext password used to generate encryption key
     # @return [SecretStore::Secret] self
     def replace_text new_plaintext, password

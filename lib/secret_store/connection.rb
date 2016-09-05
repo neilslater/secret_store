@@ -36,7 +36,7 @@ module SecretStore
     # If the password is incorrect, then the database is still created
     # @param [String] filename path to SQLite 3 database to be created
     # @param [String] password master password for the database, must match that in the YAML
-    # @param [String] filename path to YAML backup of database
+    # @param [String] yaml_filename path to YAML backup of database
     # @return [SecretStore::Connection] connected database with password set for decryption
     #
     def self.init_from_yaml filename, password, yaml_filename
