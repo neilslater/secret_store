@@ -22,8 +22,7 @@ module SecretStore
     @connection = SecretStore::Connection.load( secrets_file, password )
   end
 
-  def export_secrets
-    filename = default_backup_file
+  def export_secrets filename = default_backup_file
     @connection.store.export_yaml filename
     filename
   end
@@ -60,5 +59,15 @@ module SecretStore
     @connection.change_password new_password
 
     nil
+  end
+
+  def help!
+    puts "Methods available:"
+    puts "  read_secret 'label'"
+    puts "  write_secret 'label', 'content'"
+    puts "  delete_secret 'label'"
+    puts "  all_secret_labels"
+    puts "  change_password"
+    puts "  export_secrets ['export_yaml_file']"
   end
 end
