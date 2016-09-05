@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 require "secret_store"
 require "irb"
-require 'io/console'
 
 extend SecretStore
 

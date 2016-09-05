@@ -3,6 +3,24 @@
 [![Build Status](https://travis-ci.org/neilslater/secret_store.png?branch=master)](http://travis-ci.org/neilslater/secret_store)
 
 Ruby project for storing small secrets accessed with a master password, using standard cryptgraphic components.
+This is a hobby project to help understand correct use of the components, but also I wanted an alternative
+to password locker applications where I better understood the source code and limitations.
+
+It can be used like a password locker, with all passwords stored under logical keys. The level of
+secrecy using encryption at rest is essentially as strong as the master password used.
+
+The base encryption uses OpenSSL library AES 256 CBC, and keys are derived from a master password
+using PBKDF HMAC SHA256 (100,000 iterations). The master password is also verified against a stored
+bcrypt hash (work factor 14) - although the module will treat this a bit like authentication for
+convenience, that is not what is going on, the password is just being verified before use so that
+all secrets are encrypted based on the same starting value.
+
+Note this project cannot protect against compromised host environment - e.g. a keylogger, code insertion into Ruby
+(or an attack targetting code in this library installed on the host machine) can work around the protection,
+which is just encryption at rest of the contained secrets.
+
+There is no way to recover from a forgotten password - if that happens your secrets will
+become unreadable. Bear that in mind, and use at own risk.
 
 ## Usage
 
