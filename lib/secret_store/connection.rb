@@ -1,8 +1,10 @@
 module SecretStore
-  # This class contains a database plus the password to the database, for the convenience of
-  # having a "connected" model and not needing to send the password as a parameter to every method.
+  # This class contains a database plus the encryption key for the database, for the convenience of
+  # having a "connected" model and not needing to send the password or the derived key
+  # as a parameter to every method.
   #
-  # An instance of this class represents a single secret store plus access to it using the password.
+  # An instance of this class represents a single secret store plus the encryption key data for the
+  # store.
   #
   class Connection
     # The connected store

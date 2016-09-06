@@ -29,7 +29,7 @@ describe SecretStore::Secret do
     end
 
     describe "#create_from_plaintext" do
-      it "creates valid, decryptable object" do
+      it "creates a valid, decryptable object" do
         secret = SecretStore::Secret.create_from_plaintext( example_label, example_plaintext, example_key )
         expect( secret.decrypt_text( example_key) ).to eql example_plaintext
       end
@@ -56,7 +56,7 @@ describe SecretStore::Secret do
     subject { SecretStore::Secret.new( example_label, example_iv, example_crypted_text ) }
 
     describe "#decrypt_text" do
-      it "works when the password is correct" do
+      it "works when the key is correct" do
         expect( subject.decrypt_text( example_key) ).to eql example_plaintext
       end
 
@@ -91,7 +91,7 @@ describe SecretStore::Secret do
         expect( subject.decrypt_text( new_key ) ).to eql new_message
       end
 
-      it "changes iv, and crypted text even if password and message are the same" do
+      it "changes iv, and crypted text even if key and message are the same" do
         subject.replace_text( example_plaintext, example_key )
         expect( subject.decrypt_text( example_key) ).to eql example_plaintext
 

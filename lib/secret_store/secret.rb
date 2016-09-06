@@ -3,11 +3,11 @@ require 'securerandom'
 require 'base64'
 
 module SecretStore
-  # This class models encrypted messages based on key derivation from passwords. The encryption
-  # is provided via SecretStore::CoreMethods, and ultimately from OpenSSL.
+  # This class models encrypted messages. The encryption is provided via SecretStore::CoreMethods,
+  # and ultimately from OpenSSL.
   #
-  # An instance of this class represents a single identified encrypted message, plus public data
-  # for initialising decryption (called "initial value")
+  # An instance of this class represents a single identified encrypted message, plus a public initial
+  # value used randomise first block to be encrypted (which allows safe key re-use).
   #
   class Secret
     include CoreMethods
