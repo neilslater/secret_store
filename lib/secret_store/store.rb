@@ -30,11 +30,11 @@ module SecretStore
       pw_hash = pw.to_h
       existing = db.execute( 'SELECT hashed_password FROM master_password WHERE id = 1' )
       if existing.empty?
-        db.execute( 'INSERT INTO master_password (id, hashed_password) VALUES ( 1, ? )',
-            hash_to_array( pw_hash, [:hashed_password] ) )
+        db.execute( 'INSERT INTO master_password (id, hashed_password, pbkdf2_salt) VALUES ( 1, ?, ? )',
+            hash_to_array( pw_hash, [:hashed_password, :pbkdf2_salt] ) )
       else
-        db.execute( 'UPDATE master_password SET hashed_password=? WHERE id=1',
-            hash_to_array( pw_hash, [:hashed_password] ) )
+        db.execute( 'UPDATE master_password SET hashed_password=?, pbkdf2_salt=? WHERE id=1',
+            hash_to_array( pw_hash, [:hashed_password, :pbkdf2_salt] ) )
       end
       nil
     end
@@ -42,9 +42,9 @@ module SecretStore
     # Reads master password object from store.
     # @return [SecretStore::Password,nil] current master password (hashed)
     def load_password
-      record = db.execute( 'SELECT hashed_password FROM master_password WHERE id = 1' ).first
+      record = db.execute( 'SELECT hashed_password, pbkdf2_salt FROM master_password WHERE id = 1' ).first
       if record
-        SecretStore::Password.from_h( array_to_hash( record, [:hashed_password] ) )
+        SecretStore::Password.from_h( array_to_hash( record, [:hashed_password, :pbkdf2_salt] ) )
       end
     end
 
@@ -57,11 +57,11 @@ module SecretStore
       label = secret_hash[:label]
       existing = db.execute( 'SELECT label FROM secret WHERE label = ?', [label] )
       if existing.empty?
-        db.execute( 'INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text) VALUES (?,?,?,?)',
-            hash_to_array( secret_hash, [:label,:iv,:pbkdf2_salt,:crypted_text] ) )
+        db.execute( 'INSERT INTO secret (label,iv,crypted_text) VALUES (?,?,?)',
+            hash_to_array( secret_hash, [:label,:iv,:crypted_text] ) )
       else
-        db.execute( 'UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=? WHERE label=?',
-            hash_to_array( secret_hash, [:iv,:pbkdf2_salt,:crypted_text,:label] ) )
+        db.execute( 'UPDATE secret SET iv=?, crypted_text=? WHERE label=?',
+            hash_to_array( secret_hash, [:iv,:crypted_text,:label] ) )
       end
       nil
     end
@@ -70,9 +70,9 @@ module SecretStore
     # @param [String] label identity of secret required
     # @return [SecretStore::Secret,nil] secret, or nil if nothing stored with that label
     def load_secret label
-      record = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text FROM secret WHERE label = ?', [label] ).first
+      record = db.execute( 'SELECT label,iv,crypted_text FROM secret WHERE label = ?', [label] ).first
       if record
-        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text] )
+        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:crypted_text] )
       end
     end
 
@@ -130,9 +130,9 @@ module SecretStore
     # Reads all encrypted secrets from the store.
     # @return [Array<SecretStore::Secret>] all the secrets
     def all_secrets
-      records = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text FROM secret' )
+      records = db.execute( 'SELECT label,iv,crypted_text FROM secret' )
       records.map do |record|
-        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text] )
+        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:crypted_text] )
       end
     end
 
@@ -150,14 +150,14 @@ module SecretStore
       db.execute <<-SQL
         CREATE TABLE IF NOT EXISTS master_password (
         id INTEGER PRIMARY KEY,
-        hashed_password TEXT NOT NULL);
+        hashed_password TEXT NOT NULL,
+        pbkdf2_salt VARCHAR(20) NOT NULL);
       SQL
 
       db.execute <<-SQL
         CREATE TABLE IF NOT EXISTS secret (
         label VARCHAR(50) PRIMARY KEY,
         iv VARCHAR(20) NOT NULL,
-        pbkdf2_salt VARCHAR(20) NOT NULL,
         crypted_text TEXT NOT NULL);
       SQL
     end
