@@ -21,10 +21,6 @@ module SecretStore
     # @return [String]
     attr_reader :iv
 
-    # Salt for key derivation from password, base64 encoded (URL safe variant).
-    # @return [String]
-    attr_reader :pbkdf2_salt
-
     # Encrypted message, base64 encoded (URL safe variant).
     # @return [String]
     attr_reader :crypted_text
