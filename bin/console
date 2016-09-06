@@ -11,4 +11,6 @@ puts "Connecting to #{secrets_file}."
 connect_secret_store( secrets_file )
 help!
 
+# Actually this could be a bad idea unless we can reliably not add to command history from this
+# IRB session.
 IRB.start
