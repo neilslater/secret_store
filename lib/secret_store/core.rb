@@ -8,8 +8,10 @@ module SecretStore
   # here (or elsewhere in SecretStore)
   #
   module CoreMethods
-    # Cipher type selected from possible choices in OpenSSL
-    CIPHER_TYPE = 'aes-256-cbc'
+    # Cipher type selected from possible choices in OpenSSL. Note that the rest of the code here
+    # assumes an authenticated encryption method, so we're pretty much limited to aes-128-gcm and
+    # aes-256-gcm without further changes.
+    CIPHER_TYPE = 'aes-256-gcm'
 
     # Key length in bytes of key used by chosen cipher
     KEY_LENGTH = 32
@@ -37,28 +39,35 @@ module SecretStore
     # @param [String] plaintext message to encrypt
     # @param [String] key secret key used by cipher
     # @param [String] iv initial value (non-secret, but important to use unique initial values to avoid giving away parts of messages)
-    # @return [String] encrypted version of plaintext
+    # @param [String] auth_data authentication data which must be same for encrypt and decrypt
+    # @return [Array<String>] encrypted text and auth_tag values
     #
-    def encrypt_string plaintext, key, iv
+    def encrypt_string plaintext, key, iv, auth_data = ''
       cipher = OpenSSL::Cipher.new( CIPHER_TYPE )
       cipher.encrypt
       cipher.key = key
       cipher.iv = iv
+      cipher.auth_data = auth_data
 
-      cipher.update( plaintext ) + cipher.final
+      encrypted = cipher.update( plaintext ) + cipher.final
+      [encrypted, cipher.auth_tag]
     end
 
     # Create encrypted version of input String.
     # @param [String] ciphertext encrypted message
+    # @param [String] auth_tag authentication data (for detecting tampering)
     # @param [String] key secret key used by cipher, must be same as used to create ciphertext
     # @param [String] iv initial value, must be same as used to create ciphertext
+    # @param [String] auth_data authentication data which must be same for encrypt and decrypt
     # @return [String] plaintext decrypted from the ciphertext
     #
-    def decrypt_string ciphertext, key, iv
+    def decrypt_string ciphertext, auth_tag, key, iv, auth_data = ''
       cipher = OpenSSL::Cipher.new( CIPHER_TYPE )
       cipher.decrypt
       cipher.key = key
       cipher.iv = iv
+      cipher.auth_data = auth_data
+      cipher.auth_tag = auth_tag
 
       cipher.update( ciphertext ) + cipher.final
     end

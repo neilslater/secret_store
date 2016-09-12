@@ -25,15 +25,21 @@ module SecretStore
     # @return [String]
     attr_reader :crypted_text
 
+    # Authentication tag, protects against tampering attacks, base64 encoded (URL safe variant).
+    # @return [String]
+    attr_reader :auth_tag
+
     # Constructs valid secret from strings as they are stored in SecretStore.
     # @param [String] label identifier for the secret, should be unique within a store
     # @param [String] iv_b64 initial value for encryption, base64 encoded (URL safe variant)
     # @param [String] crypted_text_b64 encrypted message, base64 encoded (URL safe variant)
+    # @param [String] auth_tag_b64 authentication tag, base64 encoded (URL safe variant)
     # @return [SecretStore::Secret] new object
-    def initialize label, iv_b64, crypted_text_b64
+    def initialize label, iv_b64, crypted_text_b64, auth_tag_b64
       @label = label.to_s
       @iv = iv_b64
       @crypted_text = crypted_text_b64
+      @auth_tag = auth_tag_b64
     end
 
     # Constructs valid secret from plaintext, encrypting it using supplied password. The
@@ -44,8 +50,8 @@ module SecretStore
     # @return [SecretStore::Secret] new object
     def self.create_from_plaintext label, new_text, key
       iv_b64 = encode_bytes( SecureRandom.random_bytes(16) )
-      crypted_text_b64 = encode_bytes( encrypt_string( new_text, key, decode_bytes( iv_b64 ) ) )
-      self.new( label, iv_b64, crypted_text_b64 )
+      crypted_text_b64, auth_tag_b64 = encrypt_string( new_text, key, decode_bytes( iv_b64 ) ).map { |s| encode_bytes( s ) }
+      self.new( label, iv_b64, crypted_text_b64, auth_tag_b64 )
     end
 
     # Decrypts secret message and returns it. Decryption will only succeed if the password is
@@ -53,7 +59,7 @@ module SecretStore
     # @param [String] key encryption key
     # @return [String] plaintext message originally saved into object
     def decrypt_text key
-      decrypt_string decode_bytes( crypted_text ), key, decode_bytes( iv )
+      decrypt_string decode_bytes( crypted_text ), decode_bytes( auth_tag ), key, decode_bytes( iv )
     end
 
     # Rebuilds secret with new plaintext, encrypting it using supplied password. The password can be
@@ -63,9 +69,9 @@ module SecretStore
     # @param [String] new_plaintext plaintext version of new message
     # @param [String] password encryption key
     # @return [SecretStore::Secret] self
-    def replace_text new_plaintext, key
+    def replace_text new_text, key
       @iv = encode_bytes( SecureRandom.random_bytes(16) )
-      @crypted_text = encode_bytes( encrypt_string( new_plaintext, key, decode_bytes( iv ) ) )
+      @crypted_text, @auth_tag = encrypt_string( new_text, key, decode_bytes( @iv ) ).map { |s| encode_bytes( s ) }
       self
     end
 
@@ -75,7 +81,8 @@ module SecretStore
       Hash[
         :label => @label,
         :iv => @iv,
-        :crypted_text => @crypted_text
+        :crypted_text => @crypted_text,
+        :auth_tag => @auth_tag
       ]
     end
 
@@ -89,7 +96,7 @@ module SecretStore
         end
       end
 
-      self.new( h[:label], h[:iv], h[:crypted_text] )
+      self.new( h[:label], h[:iv], h[:crypted_text], h[:auth_tag] )
     end
   end
 end
