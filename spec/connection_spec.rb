@@ -1,5 +1,7 @@
 require 'spec_helper'
 
+puts OpenSSL::Cipher.ciphers
+
 describe SecretStore::Connection do
   let(:example_password) { 'blubbery' }
   let(:example_key) { Base64.urlsafe_decode64("zfOc-2CKnVA0l3vpIsZUr6lhgnGdBAuxcPIK_H9lsY4=") }
