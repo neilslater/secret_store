@@ -2,10 +2,10 @@ require 'spec_helper'
 
 describe SecretStore::Secret do
   let(:example_label) { "example" }
-  let(:example_iv) { "OnxLeMWx_KNDjLf2hS6qrw==" }
-  let(:example_crypted_text) { "qEvVmafdSF-PYVxuutkkntU=" }
+  let(:example_iv) { "FRhAQEyXMkmRpmkiT7O5vA==" }
+  let(:example_crypted_text) { "-FqKou0tYMG7nCHhS3GN-Ds=" }
   let(:example_key) { Base64.urlsafe_decode64("zfOc-2CKnVA0l3vpIsZUr6lhgnGdBAuxcPIK_H9lsY4=") }
-  let(:example_auth_tag) { "VcmfVqqQXq5at1M28tdTVw==" }
+  let(:example_auth_tag) { "iOx36w48nzqDe1k4MIFPUA==" }
 
   let(:example_plaintext) { 'This is a secret!' }
 
@@ -93,6 +93,14 @@ describe SecretStore::Secret do
         fixed_secret = SecretStore::Secret.new( example_label, example_iv,
             Base64.urlsafe_encode64(copy_cipher), example_auth_tag )
         expect( fixed_secret.decrypt_text( example_key) ).to eql example_plaintext
+      end
+
+      it "raises error when label is changed" do
+        tampered_secret = SecretStore::Secret.new( 'new_label', example_iv,
+            example_crypted_text, example_auth_tag )
+        expect {
+          tampered_secret.decrypt_text( example_key)
+        }.to raise_error OpenSSL::Cipher::CipherError
       end
     end
 

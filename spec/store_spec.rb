@@ -11,12 +11,12 @@ describe SecretStore::Store do
   let(:example_key) { Base64.urlsafe_decode64("zfOc-2CKnVA0l3vpIsZUr6lhgnGdBAuxcPIK_H9lsY4=") }
 
   let(:example_secret_1) {
-    SecretStore::Secret.new( 'example', 'a9ETWqaR0_zKPwhv0dioOw==', 'DTAP0J-fyloaQAQV9XMfiMxO6TWpYSsHTt-5LjncH3I=' )
+    SecretStore::Secret.new( 'example', 'ot7vSPiwpd5DNscfHYJYAQ==', 'qMAKyAUcHoyeCBQN6Bx5Czc=', 'EdPjgVqJ6QnhjV3zkrCnBg==' )
   }
   let(:example_plaintext_1) { 'This is a secret!' }
 
   let(:example_secret_2) {
-    SecretStore::Secret.new( 'second', 'W7hfFvU5bctTi8ecAiJwVg==', 'vppHb_UxXI1lQwxcO7N03dftZmSBKc1zCy_hWFm5hGk=' )
+    SecretStore::Secret.new( 'second', '0t26DfXiwcVMaDEIUE1Lwg==', 'ssO1_-ioS5LS4sE2Ywf0k-k3iuJoQmHd', '6fVRTtuEbycHjEt1ktVHgA==' )
   }
   let(:example_plaintext_2) { 'This is a second secret!' }
 
@@ -196,8 +196,8 @@ describe SecretStore::Store do
               :pbkdf2_salt => "1CgmW8jBemz001LcphM0tA=="
           ],
           :secrets => [
-            Hash[ :label=>"example", :iv=>"a9ETWqaR0_zKPwhv0dioOw==",
-                  :crypted_text=>"DTAP0J-fyloaQAQV9XMfiMxO6TWpYSsHTt-5LjncH3I="]
+            Hash[ :label=>"example", :iv=> 'ot7vSPiwpd5DNscfHYJYAQ==',
+                  :crypted_text=> 'qMAKyAUcHoyeCBQN6Bx5Czc=', :auth_tag => 'EdPjgVqJ6QnhjV3zkrCnBg==' ]
           ]
         ]
       end

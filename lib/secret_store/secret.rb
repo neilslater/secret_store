@@ -6,14 +6,14 @@ module SecretStore
   # This class models encrypted messages. The encryption is provided via SecretStore::CoreMethods,
   # and ultimately from OpenSSL.
   #
-  # An instance of this class represents a single identified encrypted message, plus a public initial
-  # value used randomise first block to be encrypted (which allows safe key re-use).
+  # An instance of this class represents a single identified encrypted message, plus non-sensitive data
+  # that protects against known plaintext (for key re-use) and tampering attacks.
   #
   class Secret
     include CoreMethods
     extend CoreMethods
 
-    # Identifier for the secret, should be unique within a store.
+    # Identifier for the secret, should be unique within a store. This is used for authentication.
     # @return [String]
     attr_reader :label
 
@@ -50,7 +50,7 @@ module SecretStore
     # @return [SecretStore::Secret] new object
     def self.create_from_plaintext label, new_text, key
       iv_b64 = encode_bytes( SecureRandom.random_bytes(16) )
-      crypted_text_b64, auth_tag_b64 = encrypt_string( new_text, key, decode_bytes( iv_b64 ) ).map { |s| encode_bytes( s ) }
+      crypted_text_b64, auth_tag_b64 = encrypt_string( new_text, key, decode_bytes( iv_b64 ), label ).map { |s| encode_bytes( s ) }
       self.new( label, iv_b64, crypted_text_b64, auth_tag_b64 )
     end
 
@@ -59,7 +59,7 @@ module SecretStore
     # @param [String] key encryption key
     # @return [String] plaintext message originally saved into object
     def decrypt_text key
-      decrypt_string decode_bytes( crypted_text ), decode_bytes( auth_tag ), key, decode_bytes( iv )
+      decrypt_string decode_bytes( crypted_text ), decode_bytes( auth_tag ), key, decode_bytes( iv ), label
     end
 
     # Rebuilds secret with new plaintext, encrypting it using supplied password. The password can be
@@ -71,7 +71,7 @@ module SecretStore
     # @return [SecretStore::Secret] self
     def replace_text new_text, key
       @iv = encode_bytes( SecureRandom.random_bytes(16) )
-      @crypted_text, @auth_tag = encrypt_string( new_text, key, decode_bytes( @iv ) ).map { |s| encode_bytes( s ) }
+      @crypted_text, @auth_tag = encrypt_string( new_text, key, decode_bytes( @iv ), label ).map { |s| encode_bytes( s ) }
       self
     end
 

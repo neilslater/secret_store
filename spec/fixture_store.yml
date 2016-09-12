@@ -1,0 +1,13 @@
+---
+:master_password:
+  :hashed_password: "$2a$14$El244JS41doLJakEQ/xDrOBEUkof8.TDo62qBrosgOg6n4KOukZyi"
+  :pbkdf2_salt: 1CgmW8jBemz001LcphM0tA==
+:secrets:
+- :label: example
+  :iv: ot7vSPiwpd5DNscfHYJYAQ==
+  :crypted_text: qMAKyAUcHoyeCBQN6Bx5Czc=
+  :auth_tag: EdPjgVqJ6QnhjV3zkrCnBg==
+- :label: second
+  :iv: 0t26DfXiwcVMaDEIUE1Lwg==
+  :crypted_text: ssO1_-ioS5LS4sE2Ywf0k-k3iuJoQmHd
+  :auth_tag: 6fVRTtuEbycHjEt1ktVHgA==
