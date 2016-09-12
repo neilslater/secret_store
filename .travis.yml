@@ -4,7 +4,10 @@ language: ruby
 matrix:
     include:
     - rvm: "1.9.3"
-      env: OPENSSL=1.1.0 OPENSSL_VERSION=openssl-1.1.0
+      env: OPENSSL=1.0.1 OPENSSL_VERSION=openssl-1.0.1
     - rvm: "2.1.4"
-      env: OPENSSL=1.1.0
-
+      env: OPENSSL=1.0.1
+    - rvm: "2.2.0"
+      env: OPENSSL=1.0.1
+    - rvm: "2.3.1"
+      env: OPENSSL=1.0.1
