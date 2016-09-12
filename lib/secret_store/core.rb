@@ -2,8 +2,6 @@ require 'openssl'
 require 'securerandom'
 require 'base64'
 
-OpenSSL::Cipher.ciphers
-
 module SecretStore
   # This module contains the logic for all encoding and encrypting performed by the rest of the
   # project. Internally, encryption is provided by OpenSSL. There are no cryptography algorithms implemented
