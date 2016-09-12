@@ -66,6 +66,8 @@ module SecretStore
       cipher.decrypt
       cipher.key = key
       cipher.iv = iv
+      p cipher.methods.sort - Object.methods
+
       cipher.auth_tag = auth_tag
       cipher.auth_data = auth_data
 
