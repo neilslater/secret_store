@@ -47,7 +47,7 @@ module SecretStore
       cipher.encrypt
       cipher.key = key
       cipher.iv = iv
-      cipher.auth_data = auth_data
+      cipher.aad = auth_data
 
       encrypted = cipher.update( plaintext ) + cipher.final
       [encrypted, cipher.auth_tag]
@@ -66,7 +66,7 @@ module SecretStore
       cipher.decrypt
       cipher.key = key
       cipher.iv = iv
-      cipher.auth_data = auth_data
+      cipher.aad = auth_data
       cipher.auth_tag = auth_tag
 
       cipher.update( ciphertext ) + cipher.final
