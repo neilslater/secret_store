@@ -63,10 +63,10 @@ describe SecretStore::Secret do
       end
 
       it "raises error when the key is incorrect" do
-        bad_passwords = ['', 'wrong', SecureRandom.random_bytes(32) ]
-        bad_passwords.each do |bad_password|
+        bad_keys = ['', 'wrong', SecureRandom.random_bytes(32) ]
+        bad_keys.each do |bad_key|
           expect {
-            subject.decrypt_text( bad_password )
+            subject.decrypt_text( bad_key )
           }.to raise_error OpenSSL::Cipher::CipherError
         end
       end
@@ -77,6 +77,22 @@ describe SecretStore::Secret do
         expect( subject.iv ).to eql example_iv
         expect( subject.crypted_text ).to eql example_crypted_text
         expect( subject.auth_tag ).to eql example_auth_tag
+      end
+
+      it "raises error when crypted text has been tampered with" do
+        copy_cipher = Base64.urlsafe_decode64( subject.crypted_text )
+        copy_cipher[-1] = (copy_cipher[-1].ord ^ 4).chr # xor a bit on last chaacter
+        tampered_secret = SecretStore::Secret.new( example_label, example_iv,
+            Base64.urlsafe_encode64(copy_cipher), example_auth_tag )
+        expect {
+          tampered_secret.decrypt_text( example_key)
+        }.to raise_error OpenSSL::Cipher::CipherError
+
+        # Just to confirm the code above would otherwise the valid if we undo the tampering
+        copy_cipher[-1] = (copy_cipher[-1].ord ^ 4).chr # xor a bit on last chaacter
+        fixed_secret = SecretStore::Secret.new( example_label, example_iv,
+            Base64.urlsafe_encode64(copy_cipher), example_auth_tag )
+        expect( fixed_secret.decrypt_text( example_key) ).to eql example_plaintext
       end
     end
 
