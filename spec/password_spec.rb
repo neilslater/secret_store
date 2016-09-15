@@ -1,23 +1,24 @@
 require 'spec_helper'
 
 describe SecretStore::Password do
-  let(:example_password) { "blubbery" }
-  let(:example_password_hash) { "$2a$14$El244JS41doLJakEQ/xDrOBEUkof8.TDo62qBrosgOg6n4KOukZyi" }
-  let(:example_pbkdf_salt) { "1CgmW8jBemz001LcphM0tA==" }
-  let(:example_key) { Base64.urlsafe_decode64("zfOc-2CKnVA0l3vpIsZUr6lhgnGdBAuxcPIK_H9lsY4=") }
+  let(:example_password) { 'QwertyUiop' }
+  let(:example_bcrypt_salt) { "$2a$14$.WO3JtKxNhzlASL4eQpkEO" }
+  let(:example_pbkdf_salt) { "rCLPwKKsFb5WwgY1y0LwAQ==" }
+  let(:example_cipher) { "9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==" }
+  let(:example_checksum) { "3EG3i1.oq1T5cmZVlq.cnOt28gz6U8G" }
 
   describe "class methods" do
     describe "#new" do
       it "creates valid object from good password hash" do
-        expect( SecretStore::Password.new( example_password_hash, example_pbkdf_salt ) ).to be_a SecretStore::Password
+        expect( SecretStore::Password.new( example_bcrypt_salt, example_pbkdf_salt, example_cipher ) ).to be_a SecretStore::Password
       end
 
-      it "does not create a Password object from Strings which are not password hashes" do
-        bad_pw_hashes = ['','hello','Secret','nil']
+      it "does not create a Password object from Strings which are not bcrypt salts" do
+        bad_pw_hashes = ['','hello','Secret','nil', example_bcrypt_salt + example_checksum]
         bad_pw_hashes.each do |bad_pw_hash|
           expect {
-            SecretStore::Password.new( bad_pw_hash, example_pbkdf_salt )
-          }.to raise_error BCrypt::Errors::InvalidHash
+            SecretStore::Password.new( bad_pw_hash, example_pbkdf_salt, example_cipher )
+          }.to raise_error RuntimeError, /Bad bcrypt_salt/
         end
       end
     end
@@ -29,49 +30,37 @@ describe SecretStore::Password do
 
       it "matches to original password" do
         pw = SecretStore::Password.create( 'super-secret' )
-        expect( pw.matches( 'super-secret') ).to be true
+        expect( pw.activate_checksum( 'super-secret') ).to be_truthy
       end
     end
 
     describe "#from_h" do
       it "creates valid object from serialisation" do
-        h = Hash[ :hashed_password => example_password_hash, :pbkdf2_salt => example_pbkdf_salt ]
+        h = Hash[ :bcrypt_salt => example_bcrypt_salt, :pbkdf2_salt => example_pbkdf_salt,
+                  :test_encryption => example_cipher ]
         expect( SecretStore::Password.from_h( h ) ).to be_a SecretStore::Password
       end
     end
   end
 
   describe "instance methods" do
-    subject { SecretStore::Password.new( example_password_hash, example_pbkdf_salt ) }
+    subject { SecretStore::Password.new( example_bcrypt_salt, example_pbkdf_salt, example_cipher ) }
 
-    describe "#matches" do
-      it "returns true for correct plaintext password" do
-        expect( subject.matches(example_password) ).to be true
+    describe "#activate_checksum" do
+      it "generates correct checksum value" do
+        expect( subject.activate_checksum(example_password) ).to eql example_checksum
       end
 
-      it "returns false for incorrect passwords" do
-        bad_pws = [nil, '', 'frej', 'password']
-        bad_pws.each do |bad_pw|
-          expect( subject.matches(bad_pw) ).to be false
-        end
-      end
-    end
-
-    describe "#activate_key" do
-      it "generates correct key value" do
-        expect( subject.activate_key(example_password) ).to eql example_key
-      end
-
-      it "sets key property" do
-        subject.activate_key(example_password)
-        expect( subject.key ).to eql example_key
+      it "sets checksum property" do
+        subject.activate_checksum(example_password)
+        expect( subject.checksum ).to eql example_checksum
       end
 
       it "raises error for incorrect passwords" do
-        bad_pws = [nil, '', 'password', example_key, example_password_hash, example_pbkdf_salt]
+        bad_pws = [nil, '', 'password', example_checksum, example_bcrypt_salt, example_pbkdf_salt]
         bad_pws.each do |bad_pw|
           expect {
-            subject.activate_key(bad_pw)
+            subject.activate_checksum(bad_pw)
           }.to raise_error RuntimeError, /password/
         end
       end
@@ -85,8 +74,7 @@ describe SecretStore::Password do
       it "can be passed into SecretStore::Password.from_h to re-create same password" do
         serialised = subject.to_h
         deserialised = SecretStore::Password.from_h( serialised )
-        expect( deserialised.matches(example_password) ).to be true
-        expect( deserialised.activate_key(example_password) ).to eql example_key
+        expect( deserialised.activate_checksum(example_password) ).to eql example_checksum
       end
     end
   end

@@ -16,8 +16,8 @@ module SecretStore
     # Key length in bytes of key used by chosen cipher
     KEY_LENGTH = 32
 
-    # Number of iterations to use when deriving a key from password
-    PBKDF_ITERATIONS = 100000
+    # Number of iterations to use when deriving a key from password's checksum
+    PBKDF_ITERATIONS = 10000
 
     # Convert String of arbitrary bytes to String suitable for storing. Inverse of decode_bytes.
     # @param [String] raw_bytes bytes to encode
@@ -78,7 +78,7 @@ module SecretStore
     # @param [String] salt typically random, but non-secret, value used to ensure variation between uses of the derivation function
     # @return [String] key suitable for use in chosen cipher
     #
-    def key_from_password password, salt
+    def key_from_checksum password, salt
       OpenSSL::PKCS5.pbkdf2_hmac( password, salt,
                                   PBKDF_ITERATIONS, KEY_LENGTH,
                                   OpenSSL::Digest::SHA256.new )

@@ -28,13 +28,13 @@ module SecretStore
     # @return [nil]
     def save_password pw
       pw_hash = pw.to_h
-      existing = db.execute( 'SELECT hashed_password FROM master_password WHERE id = 1' )
+      existing = db.execute( 'SELECT bcrypt_salt FROM master_password WHERE id = 1' )
       if existing.empty?
-        db.execute( 'INSERT INTO master_password (id, hashed_password, pbkdf2_salt) VALUES ( 1, ?, ? )',
-            hash_to_array( pw_hash, [:hashed_password, :pbkdf2_salt] ) )
+        db.execute( 'INSERT INTO master_password (id, bcrypt_salt, pbkdf2_salt, test_encryption) VALUES ( 1, ?, ?, ? )',
+            hash_to_array( pw_hash, [:bcrypt_salt, :pbkdf2_salt, :test_encryption] ) )
       else
-        db.execute( 'UPDATE master_password SET hashed_password=?, pbkdf2_salt=? WHERE id=1',
-            hash_to_array( pw_hash, [:hashed_password, :pbkdf2_salt] ) )
+        db.execute( 'UPDATE master_password SET bcrypt_salt=?, pbkdf2_salt=?, test_encryption=? WHERE id=1',
+            hash_to_array( pw_hash, [:bcrypt_salt, :pbkdf2_salt, :test_encryption] ) )
       end
       nil
     end
@@ -42,9 +42,9 @@ module SecretStore
     # Reads master password object from store.
     # @return [SecretStore::Password,nil] current master password (hashed)
     def load_password
-      record = db.execute( 'SELECT hashed_password, pbkdf2_salt FROM master_password WHERE id = 1' ).first
+      record = db.execute( 'SELECT bcrypt_salt, pbkdf2_salt, test_encryption FROM master_password WHERE id = 1' ).first
       if record
-        SecretStore::Password.from_h( array_to_hash( record, [:hashed_password, :pbkdf2_salt] ) )
+        SecretStore::Password.from_h( array_to_hash( record, [:bcrypt_salt, :pbkdf2_salt, :test_encryption] ) )
       end
     end
 
@@ -150,8 +150,9 @@ module SecretStore
       db.execute <<-SQL
         CREATE TABLE IF NOT EXISTS master_password (
         id INTEGER PRIMARY KEY,
-        hashed_password TEXT NOT NULL,
-        pbkdf2_salt VARCHAR(20) NOT NULL);
+        bcrypt_salt TEXT NOT NULL,
+        pbkdf2_salt VARCHAR(20) NOT NULL,
+        test_encryption TEXT NOT NULL);
       SQL
 
       db.execute <<-SQL

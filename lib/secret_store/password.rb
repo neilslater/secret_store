@@ -10,53 +10,59 @@ module SecretStore
   #
   class Password
     include CoreMethods
+    extend CoreMethods
 
-    # The hashed password
+    # Salt for turning password into checksum using bcrypt hashing algorithm
     # @return [BCrypt::Password]
-    attr_reader :password
+    attr_reader :bcrypt_salt
 
-    # Salt for password-based key derivation function, base64 encoded (URL safe variant).
+    # Salt for turning checksum into key using PBKDF2 algorithm for verifying master password
     # @return [String]
     attr_reader :pbkdf2_salt
 
-    # Encryption key, calculated during call to activate_key
+    # A test random encryption used to verify that the master password is correct
+    # @return [String]
+    attr_reader :test_encryption
+
+    # Bcrypt checksum, calculated during call to activate
     # @return [String,nil]
-    attr_reader :key
+    attr_reader :checksum
 
     # Create new object from stored String representations.
-    # @param [String] hashed_password a serialised BCrypt string e.g. "$2a$14$RDZ2LU04FGZh0UHS8leW.OCD0/0UONUz.hobUOS2HKdgqdOqoA/gG"
+    # @param [String] bcrypt_salt a BCrypt salt string e.g. "$2a$14$39pphn1Ag848HEujWSowFO"
     # @param [String] pbkdf2_salt salt for key derivation from password, base64 encoded (URL safe variant)
+    # @param [String] test_encryption three-part encrypted data to test against supplied password
     # @return [SecretStore::Password]
-    def initialize hashed_password, pbkdf2_salt = encode_bytes(SecureRandom.random_bytes(16))
-      @password = BCrypt::Password.new( hashed_password.to_s )
+    def initialize bcrypt_salt, pbkdf2_salt, test_encryption
+      if BCrypt::Engine.valid_salt?( bcrypt_salt ) && bcrypt_salt.length == 29
+        @bcrypt_salt = bcrypt_salt
+      else
+        raise "Bad bcrypt_salt '#{bcrypt_salt}'"
+      end
       if decode_bytes( pbkdf2_salt ).length != 16
         raise "Unexpected size of PBKDF salt"
       end
       @pbkdf2_salt = pbkdf2_salt
-      @key = nil
+      @test_encryption = test_encryption
+      @checksum = nil
     end
 
-    # Whether or not the hashed password matches to a given plaintext password. This causes BCrypt
-    # to calculate the hash of the supplied plaintext version, so this method is slow.
-    # @param [String] plain_password a candidate match to the original password
-    # @return [Boolean] true if there is a match, false otherwise
-    def matches plain_password
-      @password == plain_password
-    end
-
-    # Generates decryption key from supplied password. To successfully decrypt stored encrypted values,
-    # the password and salt must both be equal to the values used during encryption.
+    # Generates checksum from supplied password. To successfully decrypt stored encrypted values,
+    # the password and both salts must both be equal to the values used during encryption.
     # @param [String] plain_password
-    # @return [String] key suitable for encrypting and decrypting secrets based on the password
-    def activate_key plain_password
-      # NB This is not a security check!
-      #    Removing this step will not allow decryptions from bad passwords. Instead they will
-      #    generate invalid keys that throw errors during decryption or create gibberish instead
-      #    of correct decryptions.
-      unless matches( plain_password )
-        raise "Incorrect password."
+    # @return [String] checksum suitable for passing to pbkdf2 algorithm
+    def activate_checksum plain_password
+      @checksum = BCrypt::Engine.hash_secret( plain_password, bcrypt_salt )[29,32]
+
+      # NB This is not enforcing security in Ruby!
+      #    Removing this checking step does not allow decryption when user does not have password.
+      #    This is here to keep master password synchronised across all items - without it we could
+      #    end up with different passwords used for each secret.
+      unless verify_test_encryption( @checksum, test_encryption )
+        raise "Incorrect password"
       end
-      @key = key_from_password( plain_password, decode_bytes(pbkdf2_salt) )
+
+      @checksum
     end
 
     # Generates new SecretStore::Password from a given plaintext password. This causes BCrypt
@@ -64,15 +70,20 @@ module SecretStore
     # @param [String] plain_password an original password to use in future matching
     # @return [SecretStore::Password] new object
     def self.create plain_password
-      self.new( BCrypt::Password.create( plain_password ) )
+      bcrypt_salt = BCrypt::Engine.generate_salt
+      checksum = BCrypt::Engine.hash_secret( plain_password, bcrypt_salt )[29,32]
+      pbkdf2_salt = encode_bytes(SecureRandom.random_bytes(16))
+      test_encryption = create_test_encryption( checksum, pbkdf2_salt )
+      self.new( bcrypt_salt, pbkdf2_salt, test_encryption )
     end
 
     # Serialise to a Hash. Inverse of .from_h
     # @return [Hash] serialised version of object
     def to_h
       Hash[
-        :hashed_password => password.to_s,
-        :pbkdf2_salt => pbkdf2_salt
+        :bcrypt_salt => bcrypt_salt.to_s,
+        :pbkdf2_salt => pbkdf2_salt,
+        :test_encryption => test_encryption
       ]
     end
 
@@ -80,7 +91,28 @@ module SecretStore
     # @param [Hash] h as generated by .to_h
     # @return [SecretStore::Password] new object
     def self.from_h h
-      self.new( h[:hashed_password], h[:pbkdf2_salt] )
+      self.new( h[:bcrypt_salt], h[:pbkdf2_salt], h[:test_encryption] )
+    end
+
+    private
+
+    def self.create_test_encryption passcode, pbkdf2_salt
+      key = key_from_checksum( passcode, decode_bytes(pbkdf2_salt) )
+      new_message = SecureRandom.hex(16)
+      iv_b64 = encode_bytes( SecureRandom.random_bytes(16) )
+      crypted_text_b64, auth_tag_b64 = encrypt_string( new_message, key, decode_bytes( iv_b64 ), 'master' ).map { |s| encode_bytes( s ) }
+      [ iv_b64, crypted_text_b64, auth_tag_b64 ].join(' ~ ')
+    end
+
+    def verify_test_encryption passcode, test_text
+      key = key_from_checksum( passcode, decode_bytes(pbkdf2_salt) )
+      iv_b64, crypted_text_b64, auth_tag_b64 = test_text.split(' ~ ')
+      begin
+        decrypt_string( decode_bytes( crypted_text_b64 ), decode_bytes( auth_tag_b64 ), key, decode_bytes( iv_b64 ), 'master' )
+        true
+      rescue OpenSSL::Cipher::CipherError
+        false
+      end
     end
   end
 end
