@@ -9,7 +9,7 @@ to password locker applications where I better understood the source code and li
 It can be used like a password locker, with all passwords stored under logical keys. The level of
 secrecy using encryption at rest is essentially as strong as the master password used.
 
-The base encryption uses OpenSSL library AES 256 CBC, and keys are derived from a master password
+The base encryption uses OpenSSL library AES 256 GCM, and keys are derived from a master password
 using PBKDF HMAC SHA256 (100,000 iterations). The master password is also verified against a stored
 bcrypt hash (work factor 14) - although the module will treat this a bit like authentication for
 convenience, that is not what is going on, the password is just being verified before use so that

@@ -1,6 +1,46 @@
 #!/usr/bin/env ruby
-require "secret_store"
-require "irb"
+require 'secret_store'
+require 'irb'
+require 'irb/completion'
+
+module IRB
+  SECRET_STORE_CONF = Hash[
+    :PROMPT_MODE => :DEFAULT,
+    :IRB_NAME => "secret_store",
+    :IRB_RC => nil,
+    :SAVE_HISTORY => nil,
+    :HISTORY_FILE => nil
+  ]
+
+  def IRB.start_secret_store
+    STDOUT.sync = true
+
+    IRB.init_config( nil )
+    IRB.init_error
+    IRB.parse_opts
+    # IRB.run_config
+    IRB.load_modules
+
+    SECRET_STORE_CONF.each do |k,v|
+      IRB.conf[k] = v
+    end
+
+    irb = Irb.new
+    @CONF[:MAIN_CONTEXT] = irb.context
+
+    trap("SIGINT") do
+      irb.signal_handle
+    end
+
+    begin
+      catch(:IRB_EXIT) do
+        irb.eval_input
+      end
+    ensure
+      irb_at_exit
+    end
+  end
+end
 
 extend SecretStore
 
@@ -11,6 +51,4 @@ puts "Connecting to #{secrets_file}."
 connect_secret_store( secrets_file )
 help!
 
-# Actually this could be a bad idea unless we can reliably not add to command history from this
-# IRB session.
-IRB.start
+IRB.start_secret_store
