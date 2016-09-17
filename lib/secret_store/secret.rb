@@ -21,6 +21,11 @@ module SecretStore
     # @return [String]
     attr_reader :iv
 
+    # Key generation salt, base64 encoded (URL safe variant). Key is generated from an interim
+    # bcrypt hash of the master password.
+    # @return [String]
+    attr_reader :pbkdf2_salt
+
     # Encrypted message, base64 encoded (URL safe variant).
     # @return [String]
     attr_reader :crypted_text
@@ -32,12 +37,14 @@ module SecretStore
     # Constructs valid secret from strings as they are stored in SecretStore.
     # @param [String] label identifier for the secret, should be unique within a store
     # @param [String] iv_b64 initial value for encryption, base64 encoded (URL safe variant)
+    # @param [String] pbkdf2_salt_b64 key generation salt, base64 encoded (URL safe variant)
     # @param [String] crypted_text_b64 encrypted message, base64 encoded (URL safe variant)
     # @param [String] auth_tag_b64 authentication tag, base64 encoded (URL safe variant)
     # @return [SecretStore::Secret] new object
-    def initialize label, iv_b64, crypted_text_b64, auth_tag_b64
+    def initialize label, iv_b64, pbkdf2_salt_b64, crypted_text_b64, auth_tag_b64
       @label = label.to_s
       @iv = iv_b64
+      @pbkdf2_salt = pbkdf2_salt_b64
       @crypted_text = crypted_text_b64
       @auth_tag = auth_tag_b64
     end
@@ -46,19 +53,22 @@ module SecretStore
     # initial value for encryption is generated automatically using SecureRandom.
     # @param [String] label identifier for the secret, should be unique within a store
     # @param [String] new_text plaintext version of message
-    # @param [String] key encryption key
+    # @param [String] checksum secure string calculated from original password
     # @return [SecretStore::Secret] new object
-    def self.create_from_plaintext label, new_text, key
+    def self.create_from_plaintext label, new_text, checksum
       iv_b64 = encode_bytes( SecureRandom.random_bytes(16) )
+      pbkdf2_salt_b64 = random_pbkdf2_salt
+      key = key_from_checksum( checksum, decode_bytes(pbkdf2_salt_b64) )
       crypted_text_b64, auth_tag_b64 = encrypt_string( new_text, key, decode_bytes( iv_b64 ), label ).map { |s| encode_bytes( s ) }
-      self.new( label, iv_b64, crypted_text_b64, auth_tag_b64 )
+      self.new( label, iv_b64, pbkdf2_salt_b64, crypted_text_b64, auth_tag_b64 )
     end
 
     # Decrypts secret message and returns it. Decryption will only succeed if the password is
     # the same as used to create the secret.
-    # @param [String] key encryption key
-    # @return [String] plaintext message originally saved into object
-    def decrypt_text key
+    # @param [String] checksum secure string calculated from original password
+    # @return [String] plain text as originally stored in create_from_plaintext
+    def decrypt_text checksum
+      key = key_from_checksum( checksum, decode_bytes(pbkdf2_salt) )
       decrypt_string decode_bytes( crypted_text ), decode_bytes( auth_tag ), key, decode_bytes( iv ), label
     end
 
@@ -67,10 +77,12 @@ module SecretStore
     # is re-generated automatically using SecureRandom (so even if key and message are identical
     # to original, the encryption will be different)
     # @param [String] new_plaintext plaintext version of new message
-    # @param [String] password encryption key
+    # @param [String] checksum secure string calculated from original password
     # @return [SecretStore::Secret] self
-    def replace_text new_text, key
+    def replace_text new_text, checksum
       @iv = encode_bytes( SecureRandom.random_bytes(16) )
+      @pbkdf2_salt = random_pbkdf2_salt
+      key = key_from_checksum( checksum, decode_bytes(@pbkdf2_salt) )
       @crypted_text, @auth_tag = encrypt_string( new_text, key, decode_bytes( @iv ), label ).map { |s| encode_bytes( s ) }
       self
     end
@@ -82,7 +94,8 @@ module SecretStore
         :label => @label,
         :iv => @iv,
         :crypted_text => @crypted_text,
-        :auth_tag => @auth_tag
+        :auth_tag => @auth_tag,
+        :pbkdf2_salt => @pbkdf2_salt
       ]
     end
 
@@ -96,7 +109,7 @@ module SecretStore
         end
       end
 
-      self.new( h[:label], h[:iv], h[:crypted_text], h[:auth_tag] )
+      self.new( h[:label], h[:iv], h[:pbkdf2_salt], h[:crypted_text], h[:auth_tag] )
     end
   end
 end

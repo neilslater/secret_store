@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 describe SecretStore::Connection do
-  let(:example_password) { 'blubbery' }
-  let(:example_key) { Base64.urlsafe_decode64("zfOc-2CKnVA0l3vpIsZUr6lhgnGdBAuxcPIK_H9lsY4=") }
+  let(:example_password) { 'QwertyUiop' }
+  let(:example_checksum) { "3EG3i1.oq1T5cmZVlq.cnOt28gz6U8G" }
   let(:example_plaintext_1) { 'This is a secret!' }
   let(:example_plaintext_2) { 'This is a second secret!' }
   let(:sqlite_fixture) { File.join( File.dirname(__FILE__), 'fixture_store.dat' ) }
@@ -25,7 +25,7 @@ describe SecretStore::Connection do
       it "allows a new password on a new blank store" do
         store = SecretStore::Store.new( ':memory:' )
         connection = SecretStore::Connection.new( store, 'another-password' )
-        expect( store.load_password.matches( 'another-password') ).to be true
+        expect( store.load_password.activate_checksum( 'another-password') ).to be_truthy
       end
     end
 
@@ -43,7 +43,7 @@ describe SecretStore::Connection do
 
       it "allows a new password on a new blank store" do
         connection = SecretStore::Connection.load( ':memory:', 'another-password' )
-        expect( connection.store.load_password.matches( 'another-password') ).to be true
+        expect( connection.store.load_password.activate_checksum( 'another-password') ).to be_truthy
       end
     end
 
@@ -79,13 +79,13 @@ describe SecretStore::Connection do
 
       it "adds the new secret so that it can be decrypted" do
         subject.write_secret 'new_label', 'New message'
-        expect( subject.store.load_secret('new_label').decrypt_text(example_key) ).to eql 'New message'
+        expect( subject.store.load_secret('new_label').decrypt_text(example_checksum) ).to eql 'New message'
       end
 
       it "over-writes an existing secret" do
-        expect( subject.store.load_secret('example').decrypt_text(example_key) ).to eql example_plaintext_1
+        expect( subject.store.load_secret('example').decrypt_text(example_checksum) ).to eql example_plaintext_1
         subject.write_secret 'example', 'New message'
-        expect( subject.store.load_secret('example').decrypt_text(example_key) ).to eql 'New message'
+        expect( subject.store.load_secret('example').decrypt_text(example_checksum) ).to eql 'New message'
 
         db = subject.store.db
         expect( num_secrets_in(db) ).to eql 2

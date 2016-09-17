@@ -57,11 +57,11 @@ module SecretStore
       label = secret_hash[:label]
       existing = db.execute( 'SELECT label FROM secret WHERE label = ?', [label] )
       if existing.empty?
-        db.execute( 'INSERT INTO secret (label,iv,crypted_text,auth_tag) VALUES (?,?,?,?)',
-            hash_to_array( secret_hash, [:label, :iv, :crypted_text, :auth_tag] ) )
+        db.execute( 'INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)',
+            hash_to_array( secret_hash, [:label, :iv, :pbkdf2_salt, :crypted_text, :auth_tag] ) )
       else
-        db.execute( 'UPDATE secret SET iv=?, crypted_text=?, auth_tag=? WHERE label=?',
-            hash_to_array( secret_hash, [:iv, :crypted_text, :auth_tag, :label] ) )
+        db.execute( 'UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=?, auth_tag=? WHERE label=?',
+            hash_to_array( secret_hash, [:iv, :pbkdf2_salt, :crypted_text, :auth_tag, :label] ) )
       end
       nil
     end
@@ -70,9 +70,9 @@ module SecretStore
     # @param [String] label identity of secret required
     # @return [SecretStore::Secret,nil] secret, or nil if nothing stored with that label
     def load_secret label
-      record = db.execute( 'SELECT label,iv,crypted_text,auth_tag FROM secret WHERE label = ?', [label] ).first
+      record = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text,auth_tag FROM secret WHERE label = ?', [label] ).first
       if record
-        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:crypted_text,:auth_tag] )
+        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text,:auth_tag] )
       end
     end
 
@@ -130,9 +130,9 @@ module SecretStore
     # Reads all encrypted secrets from the store.
     # @return [Array<SecretStore::Secret>] all the secrets
     def all_secrets
-      records = db.execute( 'SELECT label,iv,crypted_text,auth_tag FROM secret' )
+      records = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text,auth_tag FROM secret' )
       records.map do |record|
-        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:crypted_text,:auth_tag] )
+        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text,:auth_tag] )
       end
     end
 
@@ -159,6 +159,7 @@ module SecretStore
         CREATE TABLE IF NOT EXISTS secret (
         label VARCHAR(50) PRIMARY KEY,
         iv VARCHAR(30) NOT NULL,
+        pbkdf2_salt VARCHAR(20) NOT NULL,
         crypted_text TEXT NOT NULL,
         auth_tag VARCHAR(30) NOT NULL);
       SQL

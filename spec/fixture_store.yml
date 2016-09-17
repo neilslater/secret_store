@@ -1,13 +1,17 @@
 ---
 :master_password:
-  :hashed_password: "$2a$14$El244JS41doLJakEQ/xDrOBEUkof8.TDo62qBrosgOg6n4KOukZyi"
-  :pbkdf2_salt: 1CgmW8jBemz001LcphM0tA==
+  :bcrypt_salt: "$2a$14$.WO3JtKxNhzlASL4eQpkEO"
+  :pbkdf2_salt: rCLPwKKsFb5WwgY1y0LwAQ==
+  :test_encryption: 9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE=
+    ~ dKxORrEkMFsW_uAsr3fGHA==
 :secrets:
 - :label: example
-  :iv: ot7vSPiwpd5DNscfHYJYAQ==
-  :crypted_text: qMAKyAUcHoyeCBQN6Bx5Czc=
-  :auth_tag: EdPjgVqJ6QnhjV3zkrCnBg==
+  :iv: u0CAnSPnSbN1sVi03_ck4A==
+  :crypted_text: IWYGh4x98_4Flk_1OrhvaaI=
+  :auth_tag: szbH9SG0pymGCpU3lkIWNA==
+  :pbkdf2_salt: yLIp8f6eeIzxOEvA1-uzbw==
 - :label: second
-  :iv: 0t26DfXiwcVMaDEIUE1Lwg==
-  :crypted_text: ssO1_-ioS5LS4sE2Ywf0k-k3iuJoQmHd
-  :auth_tag: 6fVRTtuEbycHjEt1ktVHgA==
+  :iv: _Ra_07_YwLgOlgFXxBh7Xg==
+  :crypted_text: aLA1CoQz0beM8NrC_mAdtru_cmHod0Gv
+  :auth_tag: WOLMoGcQdPl8hayLX9M4JQ==
+  :pbkdf2_salt: xTmbPzciYuTNa8MVIBzcVQ==

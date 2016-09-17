@@ -3,20 +3,23 @@ require 'fileutils'
 require 'tempfile'
 
 describe SecretStore::Store do
-  let(:example_password_text) { "blubbery" }
-  let(:example_password_hash) { "$2a$14$El244JS41doLJakEQ/xDrOBEUkof8.TDo62qBrosgOg6n4KOukZyi" }
-  let(:example_pbkdf_salt) { "1CgmW8jBemz001LcphM0tA==" }
-  let(:example_password) { SecretStore::Password.new(example_password_hash,example_pbkdf_salt) }
+  let(:example_password_text) { 'QwertyUiop' }
+  let(:example_password) { SecretStore::Password.new( "$2a$14$.WO3JtKxNhzlASL4eQpkEO", "rCLPwKKsFb5WwgY1y0LwAQ==",
+    "9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==" ) }
+  let(:example_bcrypt_salt) { "$2a$14$.WO3JtKxNhzlASL4eQpkEO" }
+  let(:example_pbkdf_salt) { "rCLPwKKsFb5WwgY1y0LwAQ==" }
+  let(:example_cipher) { "9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==" }
 
-  let(:example_key) { Base64.urlsafe_decode64("zfOc-2CKnVA0l3vpIsZUr6lhgnGdBAuxcPIK_H9lsY4=") }
+  let(:example_password) { SecretStore::Password.new(example_bcrypt_salt,example_pbkdf_salt,example_cipher) }
+  let(:example_checksum) { "3EG3i1.oq1T5cmZVlq.cnOt28gz6U8G" }
 
   let(:example_secret_1) {
-    SecretStore::Secret.new( 'example', 'ot7vSPiwpd5DNscfHYJYAQ==', 'qMAKyAUcHoyeCBQN6Bx5Czc=', 'EdPjgVqJ6QnhjV3zkrCnBg==' )
+    SecretStore::Secret.new( 'example', 'u0CAnSPnSbN1sVi03_ck4A==', 'yLIp8f6eeIzxOEvA1-uzbw==', 'IWYGh4x98_4Flk_1OrhvaaI=', 'szbH9SG0pymGCpU3lkIWNA==' )
   }
   let(:example_plaintext_1) { 'This is a secret!' }
 
   let(:example_secret_2) {
-    SecretStore::Secret.new( 'second', '0t26DfXiwcVMaDEIUE1Lwg==', 'ssO1_-ioS5LS4sE2Ywf0k-k3iuJoQmHd', '6fVRTtuEbycHjEt1ktVHgA==' )
+    SecretStore::Secret.new( 'second', '_Ra_07_YwLgOlgFXxBh7Xg==', 'xTmbPzciYuTNa8MVIBzcVQ==', 'aLA1CoQz0beM8NrC_mAdtru_cmHod0Gv', 'WOLMoGcQdPl8hayLX9M4JQ==' )
   }
   let(:example_plaintext_2) { 'This is a second secret!' }
 
@@ -32,10 +35,10 @@ describe SecretStore::Store do
         expect( store ).to be_a SecretStore::Store
         pw = store.load_password
         expect( pw ).to be_a SecretStore::Password
-        expect( pw.matches(example_password_text) ).to be true
+        expect( pw.activate_checksum(example_password_text) ).to eql example_checksum
         secret = store.load_secret('example')
         expect( secret ).to be_a SecretStore::Secret
-        expect( secret.decrypt_text(example_key)).to eql example_plaintext_1
+        expect( secret.decrypt_text(example_checksum)).to eql example_plaintext_1
       end
     end
 
@@ -49,7 +52,7 @@ describe SecretStore::Store do
 
       it "imports data correctly" do
         store = SecretStore::Store.import_yaml( yaml_fixture, ':memory:' )
-        expect( store.load_password.matches(example_password_text) ).to be true
+        expect( store.load_password.activate_checksum(example_password_text) ).to eql example_checksum
         expect( store.load_secret('example').to_h ).to eql example_secret_1.to_h
         expect( store.load_secret('second').to_h ).to eql example_secret_2.to_h
       end
@@ -128,11 +131,11 @@ describe SecretStore::Store do
 
         first_secret = subject.load_secret('example')
         expect( first_secret ).to be_a SecretStore::Secret
-        expect( first_secret.decrypt_text( example_key ) ).to eql example_plaintext_1
+        expect( first_secret.decrypt_text( example_checksum ) ).to eql example_plaintext_1
 
         second_secret = subject.load_secret('second')
         expect( second_secret ).to be_a SecretStore::Secret
-        expect( second_secret.decrypt_text( example_key ) ).to eql example_plaintext_2
+        expect( second_secret.decrypt_text( example_checksum ) ).to eql example_plaintext_2
       end
     end
 
@@ -149,11 +152,11 @@ describe SecretStore::Store do
 
         first_secret = subject.load_secret('example')
         expect( first_secret ).to be_a SecretStore::Secret
-        expect( first_secret.decrypt_text( example_key ) ).to eql example_plaintext_1
+        expect( first_secret.decrypt_text( example_checksum ) ).to eql example_plaintext_1
 
         second_secret = subject.load_secret('second')
         expect( second_secret ).to be_a SecretStore::Secret
-        expect( second_secret.decrypt_text( example_key ) ).to eql example_plaintext_2
+        expect( second_secret.decrypt_text( example_checksum ) ).to eql example_plaintext_2
       end
 
       it "removes an existing secret without affecting others" do
@@ -166,7 +169,7 @@ describe SecretStore::Store do
 
         second_secret = subject.load_secret('second')
         expect( second_secret ).to be_a SecretStore::Secret
-        expect( second_secret.decrypt_text( example_key ) ).to eql example_plaintext_2
+        expect( second_secret.decrypt_text( example_checksum ) ).to eql example_plaintext_2
       end
     end
 
@@ -192,12 +195,18 @@ describe SecretStore::Store do
         exported_data = YAML.load( File.read( @yaml_file ) )
         expect( exported_data ).to eql Hash[
           :master_password => Hash[
-              :hashed_password => "$2a$14$El244JS41doLJakEQ/xDrOBEUkof8.TDo62qBrosgOg6n4KOukZyi",
-              :pbkdf2_salt => "1CgmW8jBemz001LcphM0tA=="
+            :bcrypt_salt=>"$2a$14$.WO3JtKxNhzlASL4eQpkEO",
+            :pbkdf2_salt=>"rCLPwKKsFb5WwgY1y0LwAQ==",
+            :test_encryption=>"9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA=="
           ],
           :secrets => [
-            Hash[ :label=>"example", :iv=> 'ot7vSPiwpd5DNscfHYJYAQ==',
-                  :crypted_text=> 'qMAKyAUcHoyeCBQN6Bx5Czc=', :auth_tag => 'EdPjgVqJ6QnhjV3zkrCnBg==' ]
+            Hash[
+              :label=>"example",
+              :iv=>"u0CAnSPnSbN1sVi03_ck4A==",
+              :crypted_text=>"IWYGh4x98_4Flk_1OrhvaaI=",
+              :auth_tag=>"szbH9SG0pymGCpU3lkIWNA==",
+              :pbkdf2_salt=>"yLIp8f6eeIzxOEvA1-uzbw=="
+            ]
           ]
         ]
       end
@@ -218,7 +227,7 @@ describe SecretStore::Store do
         expected_plaintexts = [ example_plaintext_1, example_plaintext_2 ]
         got_secrets.sort_by(&:label).zip( expected_plaintexts ).each do |secret, plaintext|
           expect( secret ).to be_a SecretStore::Secret
-          expect( secret.decrypt_text( example_key ) ).to eql plaintext
+          expect( secret.decrypt_text( example_checksum ) ).to eql plaintext
         end
       end
     end

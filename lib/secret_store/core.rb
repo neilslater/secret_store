@@ -73,6 +73,13 @@ module SecretStore
       cipher.update( ciphertext ) + cipher.final
     end
 
+    # Creates urlsafe base64 encoded random bytes for use as pbkdf2 salt for master password or
+    # secret key derivations.
+    # @return [String] encoded salt
+    def random_pbkdf2_salt
+      encode_bytes(SecureRandom.random_bytes(16))
+    end
+
     # Derive key for cipher from a text password
     # @param [String] password secret text phrase used in generator
     # @param [String] salt typically random, but non-secret, value used to ensure variation between uses of the derivation function

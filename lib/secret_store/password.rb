@@ -72,7 +72,7 @@ module SecretStore
     def self.create plain_password
       bcrypt_salt = BCrypt::Engine.generate_salt
       checksum = BCrypt::Engine.hash_secret( plain_password, bcrypt_salt )[29,32]
-      pbkdf2_salt = encode_bytes(SecureRandom.random_bytes(16))
+      pbkdf2_salt = random_pbkdf2_salt
       test_encryption = create_test_encryption( checksum, pbkdf2_salt )
       self.new( bcrypt_salt, pbkdf2_salt, test_encryption )
     end

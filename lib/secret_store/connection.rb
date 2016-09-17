@@ -51,7 +51,7 @@ module SecretStore
     # @return [SecretStore::Secret] the new or updated secret, including encrypted text
     #
     def write_secret label, plaintext
-      secret = SecretStore::Secret.create_from_plaintext( label, plaintext, encrypt_key )
+      secret = SecretStore::Secret.create_from_plaintext( label, plaintext, encrypt_checksum )
       store.save_secret( secret )
       secret
     end
@@ -62,7 +62,7 @@ module SecretStore
     #
     def read_secret label
       if secret = store.load_secret( label )
-        secret.decrypt_text( encrypt_key )
+        secret.decrypt_text( encrypt_checksum )
       end
     end
 
@@ -93,10 +93,10 @@ module SecretStore
       end
 
       new_password = SecretStore::Password.create( new_password_text )
-      new_encrypt_key = new_password.activate_key( new_password_text )
+      new_encrypt_checksum = new_password.activate_checksum( new_password_text )
       store.all_secrets.each do |old_secret|
-        plaintext = old_secret.decrypt_text( encrypt_key )
-        new_secret = SecretStore::Secret.create_from_plaintext( old_secret.label, plaintext, new_encrypt_key )
+        plaintext = old_secret.decrypt_text( encrypt_checksum )
+        new_secret = SecretStore::Secret.create_from_plaintext( old_secret.label, plaintext, new_encrypt_checksum )
         store.save_secret( new_secret )
       end
 
@@ -107,20 +107,20 @@ module SecretStore
 
     private
 
-    def encrypt_key
-      @password.key
+    def encrypt_checksum
+      @password.checksum
     end
 
     def ensure_password password_text
       if pw = store.load_password
-        pw.activate_key password_text
+        pw.activate_checksum password_text
       else
         if password_text.length < 8
           raise "Password too short. Minimum 8 characters."
         end
         pw = SecretStore::Password.create( password_text )
         store.save_password( pw )
-        pw.activate_key password_text
+        pw.activate_checksum password_text
       end
       pw
     end
