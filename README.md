@@ -2,29 +2,40 @@
 
 [![Build Status](https://travis-ci.org/neilslater/secret_store.png?branch=master)](http://travis-ci.org/neilslater/secret_store)
 
-Ruby project for storing small secrets accessed with a master password, using standard cryptgraphic components.
-This is a hobby project to help understand correct use of the components, but also I wanted an alternative
-to password locker applications where I better understood the source code and limitations.
+Ruby project for storing small secret messages accessed with a master password, using standard cryptgraphic components.
+This is a hobby project to help understand correct use of those components.
 
 It can be used like a password locker, with all passwords stored under logical keys. The level of
 secrecy using encryption at rest is essentially as strong as the master password used.
 
 The base encryption uses OpenSSL library AES 256 GCM, and keys are derived from a master password
-using PBKDF HMAC SHA256 (100,000 iterations). The master password is also verified against a stored
-bcrypt hash (work factor 14) - although the module will treat this a bit like authentication for
-convenience, that is not what is going on, the password is just being verified before use so that
-all secrets are encrypted based on the same starting value.
+using Bcrypt to generate an interim master checksum, followed by PBKDF2 HMAC SHA256 to convert that
+checksum into a unique key per stored secret. The master password is also verified against a
+stored random message - this is so that all messages are encrypted based on the same master password.
 
-Note this project cannot protect against compromised host environment - e.g. a keylogger, code insertion into Ruby
-(or an attack targetting code in this library installed on the host machine) can work around the protection,
-which is just encryption at rest of the contained secrets.
+When the application is not in use, the stored secrets in the database
+or exported as YAML should be inaccessible without the master password, and brute-forcing that password
+is made harder by use of a moderately high Bcrypt work factor (14).
+
+Note this project cannot protect against compromised host environment whilst running - e.g. a keylogger,
+code insertion into Ruby, or targetting code in this library installed on the host machine are all attacks that can be used to
+obtain the master password.
 
 There is no way to recover from a forgotten password - if that happens your secrets will
-become unreadable. Bear that in mind, and use at own risk.
+become unreadable.
+
+## Disclaimer
+
+This code has been created primarily for learning purposes.
+
+I do not accept liability for lost passwords, or leaked data when using this code. I do not
+recommend it is used for managing important messages, such as system passwords. There are better
+open-source and commercial systems available for those purposes that provide increased secrecy *during*
+use of the product, where this Ruby script is vulnerable.
 
 ## Usage
 
-### Command line console app (uses irb)
+### Command line console app (uses irb, with command history disabled)
 
     ./console [secrets_file]
 
