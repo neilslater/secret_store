@@ -19,6 +19,9 @@ module SecretStore
     # Number of iterations to use when deriving a key from password's checksum
     PBKDF_ITERATIONS = 10000
 
+    # Number of bytes to use for IV with this cipher
+    IV_LENGTH = 12
+
     # Convert String of arbitrary bytes to String suitable for storing. Inverse of decode_bytes.
     # @param [String] raw_bytes bytes to encode
     # @return [String] encoded bytes
@@ -46,7 +49,7 @@ module SecretStore
       cipher = OpenSSL::Cipher.new( CIPHER_TYPE )
       cipher.encrypt
       cipher.key = key
-      cipher.iv = iv
+      cipher.iv = iv[0,IV_LENGTH]
       cipher.auth_data = auth_data
 
       encrypted = cipher.update( plaintext ) + cipher.final
@@ -65,7 +68,7 @@ module SecretStore
       cipher = OpenSSL::Cipher.new( CIPHER_TYPE )
       cipher.decrypt
       cipher.key = key
-      cipher.iv = iv
+      cipher.iv = iv[0,IV_LENGTH]
 
       cipher.auth_tag = auth_tag
       cipher.auth_data = auth_data
