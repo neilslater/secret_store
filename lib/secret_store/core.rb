@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'openssl'
 require 'securerandom'
 require 'base64'
@@ -17,7 +19,7 @@ module SecretStore
     KEY_LENGTH = 32
 
     # Number of iterations to use when deriving a key from password's checksum
-    PBKDF_ITERATIONS = 10000
+    PBKDF_ITERATIONS = 10_000
 
     # Number of bytes to use for IV with this cipher
     IV_LENGTH = 12
@@ -26,16 +28,16 @@ module SecretStore
     # @param [String] raw_bytes bytes to encode
     # @return [String] encoded bytes
     #
-    def encode_bytes raw_bytes
-      Base64.urlsafe_encode64( raw_bytes )
+    def encode_bytes(raw_bytes)
+      Base64.urlsafe_encode64(raw_bytes)
     end
 
     # Convert String from storage to original String of bytes. Inverse of encode_bytes.
     # @param [String] encoded_bytes string from storage
     # @return [String] original bytes
     #
-    def decode_bytes encoded_bytes
-      Base64.urlsafe_decode64( encoded_bytes )
+    def decode_bytes(encoded_bytes)
+      Base64.urlsafe_decode64(encoded_bytes)
     end
 
     # Create encrypted version of input String.
@@ -45,14 +47,14 @@ module SecretStore
     # @param [String] auth_data authentication data which must be same for encrypt and decrypt
     # @return [Array<String>] encrypted text and auth_tag values
     #
-    def encrypt_string plaintext, key, iv, auth_data = ''
-      cipher = OpenSSL::Cipher.new( CIPHER_TYPE )
+    def encrypt_string(plaintext, key, iv, auth_data = '')
+      cipher = OpenSSL::Cipher.new(CIPHER_TYPE)
       cipher.encrypt
       cipher.key = key
-      cipher.iv = iv[0,IV_LENGTH]
+      cipher.iv = iv[0, IV_LENGTH]
       cipher.auth_data = auth_data
 
-      encrypted = cipher.update( plaintext ) + cipher.final
+      encrypted = cipher.update(plaintext) + cipher.final
       [encrypted, cipher.auth_tag]
     end
 
@@ -64,16 +66,16 @@ module SecretStore
     # @param [String] auth_data authentication data which must be same for encrypt and decrypt
     # @return [String] plaintext decrypted from the ciphertext
     #
-    def decrypt_string ciphertext, auth_tag, key, iv, auth_data = ''
-      cipher = OpenSSL::Cipher.new( CIPHER_TYPE )
+    def decrypt_string(ciphertext, auth_tag, key, iv, auth_data = '')
+      cipher = OpenSSL::Cipher.new(CIPHER_TYPE)
       cipher.decrypt
       cipher.key = key
-      cipher.iv = iv[0,IV_LENGTH]
+      cipher.iv = iv[0, IV_LENGTH]
 
       cipher.auth_tag = auth_tag
       cipher.auth_data = auth_data
 
-      cipher.update( ciphertext ) + cipher.final
+      cipher.update(ciphertext) + cipher.final
     end
 
     # Creates urlsafe base64 encoded random bytes for use as pbkdf2 salt for master password or
@@ -88,10 +90,10 @@ module SecretStore
     # @param [String] salt typically random, but non-secret, value used to ensure variation between uses of the derivation function
     # @return [String] key suitable for use in chosen cipher
     #
-    def key_from_checksum password, salt
-      OpenSSL::PKCS5.pbkdf2_hmac( password, salt,
-                                  PBKDF_ITERATIONS, KEY_LENGTH,
-                                  OpenSSL::Digest::SHA256.new )
+    def key_from_checksum(password, salt)
+      OpenSSL::PKCS5.pbkdf2_hmac(password, salt,
+                                 PBKDF_ITERATIONS, KEY_LENGTH,
+                                 OpenSSL::Digest.new('SHA256'))
     end
   end
 end

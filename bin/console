@@ -1,34 +1,34 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 require 'secret_store'
 require 'irb'
 require 'irb/completion'
 
 module IRB
-  SECRET_STORE_CONF = Hash[
-    :PROMPT_MODE => :DEFAULT,
-    :IRB_NAME => "secret_store",
-    :IRB_RC => nil,
-    :SAVE_HISTORY => nil,
-    :HISTORY_FILE => nil
-  ]
+  SECRET_STORE_CONF = { PROMPT_MODE: :DEFAULT,
+                        IRB_NAME: 'secret_store',
+                        IRB_RC: nil,
+                        SAVE_HISTORY: nil,
+                        HISTORY_FILE: nil }.freeze
 
-  def IRB.start_secret_store
-    STDOUT.sync = true
+  def self.start_secret_store
+    $stdout.sync = true
 
-    IRB.init_config( nil )
+    IRB.init_config(nil)
     IRB.init_error
     IRB.parse_opts
     # IRB.run_config
     IRB.load_modules
 
-    SECRET_STORE_CONF.each do |k,v|
+    SECRET_STORE_CONF.each do |k, v|
       IRB.conf[k] = v
     end
 
     irb = Irb.new
     @CONF[:MAIN_CONTEXT] = irb.context
 
-    trap("SIGINT") do
+    trap('SIGINT') do
       irb.signal_handle
     end
 
@@ -48,7 +48,7 @@ secrets_file = ARGV.first || default_secrets_file
 
 puts "Connecting to #{secrets_file}."
 
-connect_secret_store( secrets_file )
+connect_secret_store(secrets_file)
 help!
 
 IRB.start_secret_store

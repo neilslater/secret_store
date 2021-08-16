@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'sqlite3'
 require 'yaml'
 
@@ -17,8 +19,8 @@ module SecretStore
     # valid.
     # @param [String] db_connect SQLite connection string, usually just path to file name
     # @return [SecretStore::Store]
-    def initialize db_connect
-      @db = SQLite3::Database.new( db_connect )
+    def initialize(db_connect)
+      @db = SQLite3::Database.new(db_connect)
       create_tables
     end
 
@@ -26,15 +28,15 @@ module SecretStore
     # all calls to save_password will overwrite existing data.
     # @param [SecretStore::Password] pw password object to be persisted
     # @return [nil]
-    def save_password pw
+    def save_password(pw)
       pw_hash = pw.to_h
-      existing = db.execute( 'SELECT bcrypt_salt FROM master_password WHERE id = 1' )
+      existing = db.execute('SELECT bcrypt_salt FROM master_password WHERE id = 1')
       if existing.empty?
-        db.execute( 'INSERT INTO master_password (id, bcrypt_salt, pbkdf2_salt, test_encryption) VALUES ( 1, ?, ?, ? )',
-            hash_to_array( pw_hash, [:bcrypt_salt, :pbkdf2_salt, :test_encryption] ) )
+        db.execute('INSERT INTO master_password (id, bcrypt_salt, pbkdf2_salt, test_encryption) VALUES ( 1, ?, ?, ? )',
+                   hash_to_array(pw_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
       else
-        db.execute( 'UPDATE master_password SET bcrypt_salt=?, pbkdf2_salt=?, test_encryption=? WHERE id=1',
-            hash_to_array( pw_hash, [:bcrypt_salt, :pbkdf2_salt, :test_encryption] ) )
+        db.execute('UPDATE master_password SET bcrypt_salt=?, pbkdf2_salt=?, test_encryption=? WHERE id=1',
+                   hash_to_array(pw_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
       end
       nil
     end
@@ -42,26 +44,24 @@ module SecretStore
     # Reads master password object from store.
     # @return [SecretStore::Password,nil] current master password (hashed)
     def load_password
-      record = db.execute( 'SELECT bcrypt_salt, pbkdf2_salt, test_encryption FROM master_password WHERE id = 1' ).first
-      if record
-        SecretStore::Password.from_h( array_to_hash( record, [:bcrypt_salt, :pbkdf2_salt, :test_encryption] ) )
-      end
+      record = db.execute('SELECT bcrypt_salt, pbkdf2_salt, test_encryption FROM master_password WHERE id = 1').first
+      SecretStore::Password.from_h(array_to_hash(record, %i[bcrypt_salt pbkdf2_salt test_encryption])) if record
     end
 
     # Writes encrypted secret to store. Secrets are identified by the label attribute, so this
     # will create a new entry or overwrite existing one depending on the label.
     # @param [SecretStore::Secret] secret object to be persisted
     # @return [nil]
-    def save_secret secret
+    def save_secret(secret)
       secret_hash = secret.to_h
       label = secret_hash[:label]
-      existing = db.execute( 'SELECT label FROM secret WHERE label = ?', [label] )
+      existing = db.execute('SELECT label FROM secret WHERE label = ?', [label])
       if existing.empty?
-        db.execute( 'INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)',
-            hash_to_array( secret_hash, [:label, :iv, :pbkdf2_salt, :crypted_text, :auth_tag] ) )
+        db.execute('INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)',
+                   hash_to_array(secret_hash, %i[label iv pbkdf2_salt crypted_text auth_tag]))
       else
-        db.execute( 'UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=?, auth_tag=? WHERE label=?',
-            hash_to_array( secret_hash, [:iv, :pbkdf2_salt, :crypted_text, :auth_tag, :label] ) )
+        db.execute('UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=?, auth_tag=? WHERE label=?',
+                   hash_to_array(secret_hash, %i[iv pbkdf2_salt crypted_text auth_tag label]))
       end
       nil
     end
@@ -69,18 +69,17 @@ module SecretStore
     # Reads encrypted secret with given label from store.
     # @param [String] label identity of secret required
     # @return [SecretStore::Secret,nil] secret, or nil if nothing stored with that label
-    def load_secret label
-      record = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text,auth_tag FROM secret WHERE label = ?', [label] ).first
-      if record
-        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text,:auth_tag] )
-      end
+    def load_secret(label)
+      record = db.execute('SELECT label,iv,pbkdf2_salt,crypted_text,auth_tag FROM secret WHERE label = ?',
+                          [label]).first
+      SecretStore::Secret.from_h(array_to_hash(record, %i[label iv pbkdf2_salt crypted_text auth_tag])) if record
     end
 
     # Deletes encrypted secret with given label from store.
     # @param [String] label identity of secret to be deleted
     # @return [nil]
-    def delete_secret label
-      db.execute( 'DELETE FROM secret WHERE label = ?', [label] )
+    def delete_secret(label)
+      db.execute('DELETE FROM secret WHERE label = ?', [label])
       nil
     end
 
@@ -89,15 +88,13 @@ module SecretStore
     # at rest.
     # @param [String] yaml_file path of file to write
     # @return [nil]
-    def export_yaml yaml_file
+    def export_yaml(yaml_file)
       pw = load_password
       secrets = all_secrets
-      all_data = Hash[
-        :master_password => pw.to_h,
-        :secrets => secrets.map { |s| s.to_h }
-      ]
+      all_data = { master_password: pw.to_h,
+                   secrets: secrets.map(&:to_h) }
 
-      File.open( yaml_file, 'wb' ) { |f| f.puts YAML.dump( all_data ) }
+      File.open(yaml_file, 'wb') { |f| f.puts YAML.dump(all_data) }
       nil
     end
 
@@ -108,18 +105,18 @@ module SecretStore
     # @param [String] yaml_file path of file to write
     # @param [String] db_connect SQLite connection string, usually just a path to database file name
     # @return [SecretStore::Secret] new store created from previous export
-    def self.import_yaml yaml_file, db_connect
-      store = self.new( db_connect )
-      all_data = YAML.load( File.read( yaml_file ) )
+    def self.import_yaml(yaml_file, db_connect)
+      store = new(db_connect)
+      all_data = YAML.safe_load(File.read(yaml_file), [Symbol])
 
       if pw_hash = all_data[:master_password]
-        pw = SecretStore::Password.from_h( pw_hash  )
+        pw = SecretStore::Password.from_h(pw_hash)
         store.save_password pw
       end
 
       if secret_hashes = all_data[:secrets]
         secret_hashes.each do |secret_hash|
-          secret = SecretStore::Secret.from_h( secret_hash )
+          secret = SecretStore::Secret.from_h(secret_hash)
           store.save_secret secret
         end
       end
@@ -130,20 +127,20 @@ module SecretStore
     # Reads all encrypted secrets from the store.
     # @return [Array<SecretStore::Secret>] all the secrets
     def all_secrets
-      records = db.execute( 'SELECT label,iv,pbkdf2_salt,crypted_text,auth_tag FROM secret' )
+      records = db.execute('SELECT label,iv,pbkdf2_salt,crypted_text,auth_tag FROM secret')
       records.map do |record|
-        SecretStore::Secret.from_h( array_to_hash record, [:label,:iv,:pbkdf2_salt,:crypted_text,:auth_tag] )
+        SecretStore::Secret.from_h(array_to_hash(record, %i[label iv pbkdf2_salt crypted_text auth_tag]))
       end
     end
 
     private
 
-    def hash_to_array hash, keys
+    def hash_to_array(hash, keys)
       keys.map { |k| hash[k] }
     end
 
-    def array_to_hash array, keys
-      Hash[ keys.zip(array) ]
+    def array_to_hash(array, keys)
+      keys.zip(array).to_h
     end
 
     def create_tables
