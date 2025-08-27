@@ -198,7 +198,7 @@ describe SecretStore::Store do
 
       it 'saves YAML data to the file' do
         @store.export_yaml(@yaml_file)
-        exported_data = YAML.safe_load(File.read(@yaml_file), [Symbol])
+        exported_data = YAML.safe_load(File.read(@yaml_file), permitted_classes: [Symbol])
         expect(exported_data).to eql({ master_password: { bcrypt_salt: '$2a$14$.WO3JtKxNhzlASL4eQpkEO',
                                                           pbkdf2_salt: 'rCLPwKKsFb5WwgY1y0LwAQ==',
                                                           test_encryption: '9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==' },

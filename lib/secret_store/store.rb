@@ -107,7 +107,7 @@ module SecretStore
     # @return [SecretStore::Secret] new store created from previous export
     def self.import_yaml(yaml_file, db_connect)
       store = new(db_connect)
-      all_data = YAML.safe_load(File.read(yaml_file), [Symbol])
+      all_data = YAML.safe_load(File.read(yaml_file), permitted_classes: [Symbol])
 
       if pw_hash = all_data[:master_password]
         pw = SecretStore::Password.from_h(pw_hash)
