@@ -36,8 +36,6 @@ module IRB
       catch(:IRB_EXIT) do
         irb.eval_input
       end
-    ensure
-      irb_at_exit
     end
   end
 end
