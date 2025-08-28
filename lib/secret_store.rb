@@ -109,6 +109,17 @@ module SecretStore
     nil
   end
 
+  # Reads bank passwords (starting from `pw:`) and outputs the characters at given positions.
+  # @param [String] label identifier for the secret
+  # @param [Array<Integer>] idx positons to output
+  # @return [String] characters to enter for login
+  #
+  def bank_login label, *idx
+    text = @connection.read_secret label.to_s
+    pw = ' ' + text.match(/pw:\s*([a-zA-Z0-9_-]+)/i)[1]
+    pw.chars.values_at(*idx).join(' ')
+  end
+
   # Prints basic summary of SecretStore methods.
   # @return [nil]
   #
