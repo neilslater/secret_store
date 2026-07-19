@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+  schedule:
+    - cron: '0 6 3 * *'
 
 jobs:
   test:
