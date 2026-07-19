@@ -23,7 +23,7 @@ module SecretStore
   # @return [String] full path to file.
   #
   def default_secrets_file
-    ENV['SECRET_STORE_FILE'] || File.join(ENV['HOME'], 'secrets.sqlite3.dat')
+    ENV['SECRET_STORE_FILE'] || File.join(Dir.home, 'secrets.sqlite3.dat')
   end
 
   # Default YAML file name for exports, based on SECRET_EXPORT_FILE environment variable if it is
@@ -31,7 +31,7 @@ module SecretStore
   # @return [String] full path to file.
   #
   def default_backup_file
-    ENV['SECRET_EXPORT_FILE'] || File.join(ENV['HOME'], 'secrets_export.yml')
+    ENV['SECRET_EXPORT_FILE'] || File.join(Dir.home, 'secrets_export.yml')
   end
 
   # Prompts for password and attempts connection to a SecretStore SQLite 3 database. If the database

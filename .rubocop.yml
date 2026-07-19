@@ -1,13 +1,63 @@
+plugins:
+  - rubocop-rake
+  - rubocop-rspec
+
 AllCops:
-  TargetRubyVersion: 2.7.1
+  TargetRubyVersion: 3.3
   NewCops: enable
+  Exclude:
+    - spec/create_fixtures.rb
 
 Layout/LineLength:
   Max: 120
   
 Metrics/BlockLength:
-  IgnoredMethods:
+  AllowedMethods:
     - context
     - describe
     - shared_examples
 
+Metrics/AbcSize:
+  Max: 20
+
+Metrics/MethodLength:
+  Max: 20
+
+Naming/MethodParameterName:
+  AllowedNames:
+    - db
+    - h
+    - iv
+    - pw
+
+Naming/VariableNumber:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Max: 15
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/InstanceVariable:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Max: 6
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 11
+
+RSpec/NamedSubject:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+Style/Documentation:
+  Exclude:
+    - bin/console
+
+Style/MixinUsage:
+  Exclude:
+    - bin/console

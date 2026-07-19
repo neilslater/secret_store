@@ -14,15 +14,15 @@ describe SecretStore::Password do
   describe 'class methods' do
     describe '#new' do
       it 'creates valid object from good password hash' do
-        expect(SecretStore::Password.new(example_bcrypt_salt, example_pbkdf_salt,
-                                         example_cipher)).to be_a SecretStore::Password
+        expect(described_class.new(example_bcrypt_salt, example_pbkdf_salt,
+                                   example_cipher)).to be_a described_class
       end
 
       it 'does not create a Password object from Strings which are not bcrypt salts' do
         bad_pw_hashes = ['', 'hello', 'Secret', 'nil', example_bcrypt_salt + example_checksum]
         bad_pw_hashes.each do |bad_pw_hash|
           expect do
-            SecretStore::Password.new(bad_pw_hash, example_pbkdf_salt, example_cipher)
+            described_class.new(bad_pw_hash, example_pbkdf_salt, example_cipher)
           end.to raise_error RuntimeError, /Bad bcrypt_salt/
         end
       end
@@ -30,11 +30,11 @@ describe SecretStore::Password do
 
     describe '#create' do
       it 'creates new object' do
-        expect(SecretStore::Password.create('super-secret')).to be_a SecretStore::Password
+        expect(described_class.create('super-secret')).to be_a described_class
       end
 
       it 'matches to original password' do
-        pw = SecretStore::Password.create('super-secret')
+        pw = described_class.create('super-secret')
         expect(pw.activate_checksum('super-secret')).to be_truthy
       end
     end
@@ -43,13 +43,13 @@ describe SecretStore::Password do
       it 'creates valid object from serialisation' do
         h = { bcrypt_salt: example_bcrypt_salt, pbkdf2_salt: example_pbkdf_salt,
               test_encryption: example_cipher }
-        expect(SecretStore::Password.from_h(h)).to be_a SecretStore::Password
+        expect(described_class.from_h(h)).to be_a described_class
       end
     end
   end
 
   describe 'instance methods' do
-    subject { SecretStore::Password.new(example_bcrypt_salt, example_pbkdf_salt, example_cipher) }
+    subject { described_class.new(example_bcrypt_salt, example_pbkdf_salt, example_cipher) }
 
     describe '#activate_checksum' do
       it 'generates correct checksum value' do
@@ -78,7 +78,7 @@ describe SecretStore::Password do
 
       it 'can be passed into SecretStore::Password.from_h to re-create same password' do
         serialised = subject.to_h
-        deserialised = SecretStore::Password.from_h(serialised)
+        deserialised = described_class.from_h(serialised)
         expect(deserialised.activate_checksum(example_password)).to eql example_checksum
       end
     end

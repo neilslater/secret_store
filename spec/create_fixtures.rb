@@ -2,9 +2,10 @@
 
 # Creates fixtures - need t update spec when new values are generated
 require 'secret_store'
+require 'fileutils'
 
-File.unlink('fixture_store.yml') if File.exist? 'fixture_store.yml'
-File.unlink('fixture_store.dat') if File.exist? 'fixture_store.dat'
+FileUtils.rm_f('fixture_store.yml')
+FileUtils.rm_f('fixture_store.dat')
 
 pw = SecretStore::Password.new('$2a$14$.WO3JtKxNhzlASL4eQpkEO', 'rCLPwKKsFb5WwgY1y0LwAQ==',
                                '9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==')

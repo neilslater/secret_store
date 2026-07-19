@@ -43,7 +43,8 @@ module SecretStore
     # Create encrypted version of input String.
     # @param [String] plaintext message to encrypt
     # @param [String] key secret key used by cipher
-    # @param [String] iv initial value (non-secret, but important to use unique initial values to avoid giving away parts of messages)
+    # @param [String] iv initial value (non-secret, but important to use unique initial values to avoid
+    #   giving away parts of messages)
     # @param [String] auth_data authentication data which must be same for encrypt and decrypt
     # @return [Array<String>] encrypted text and auth_tag values
     #
@@ -87,7 +88,8 @@ module SecretStore
 
     # Derive key for cipher from a text password
     # @param [String] password secret text phrase used in generator
-    # @param [String] salt typically random, but non-secret, value used to ensure variation between uses of the derivation function
+    # @param [String] salt typically random, but non-secret, value used to ensure variation between uses
+    #   of the derivation function
     # @return [String] key suitable for use in chosen cipher
     #
     def key_from_checksum(password, salt)

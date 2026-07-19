@@ -6,10 +6,6 @@ require 'tempfile'
 
 describe SecretStore::Store do
   let(:example_password_text) { 'QwertyUiop' }
-  let(:example_password) do
-    SecretStore::Password.new('$2a$14$.WO3JtKxNhzlASL4eQpkEO', 'rCLPwKKsFb5WwgY1y0LwAQ==',
-                              '9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==')
-  end
   let(:example_bcrypt_salt) { '$2a$14$.WO3JtKxNhzlASL4eQpkEO' }
   let(:example_pbkdf_salt) { 'rCLPwKKsFb5WwgY1y0LwAQ==' }
   let(:example_cipher) do
@@ -34,13 +30,13 @@ describe SecretStore::Store do
   describe 'class methods' do
     describe '#new' do
       it 'creates valid store from scratch' do
-        store = SecretStore::Store.new(':memory:')
-        expect(store).to be_a SecretStore::Store
+        store = described_class.new(':memory:')
+        expect(store).to be_a described_class
       end
 
       it 'creates valid store from existing file without deleting anything' do
-        store = SecretStore::Store.new(File.join(File.dirname(__FILE__), 'fixture_store.dat'))
-        expect(store).to be_a SecretStore::Store
+        store = described_class.new(File.join(File.dirname(__FILE__), 'fixture_store.dat'))
+        expect(store).to be_a described_class
         pw = store.load_password
         expect(pw).to be_a SecretStore::Password
         expect(pw.activate_checksum(example_password_text)).to eql example_checksum
@@ -54,12 +50,12 @@ describe SecretStore::Store do
       let(:yaml_fixture) { File.join(File.dirname(__FILE__), 'fixture_store.yml') }
 
       it 'creates a new store' do
-        store = SecretStore::Store.import_yaml(yaml_fixture, ':memory:')
-        expect(store).to be_a SecretStore::Store
+        store = described_class.import_yaml(yaml_fixture, ':memory:')
+        expect(store).to be_a described_class
       end
 
       it 'imports data correctly' do
-        store = SecretStore::Store.import_yaml(yaml_fixture, ':memory:')
+        store = described_class.import_yaml(yaml_fixture, ':memory:')
         expect(store.load_password.activate_checksum(example_password_text)).to eql example_checksum
         expect(store.load_secret('example').to_h).to eql example_secret_1.to_h
         expect(store.load_secret('second').to_h).to eql example_secret_2.to_h
@@ -68,7 +64,7 @@ describe SecretStore::Store do
   end
 
   describe 'instance methods' do
-    subject { SecretStore::Store.new(':memory:') }
+    subject { described_class.new(':memory:') }
 
     def db_num_secrets
       subject.db.execute('SELECT count(*) FROM secret').first.first
@@ -80,15 +76,15 @@ describe SecretStore::Store do
 
     describe '#save_password' do
       it 'writes password data to database' do
-        expect(db_num_passwords).to eql 0
+        expect(db_num_passwords).to be 0
         subject.save_password example_password
-        expect(db_num_passwords).to eql 1
+        expect(db_num_passwords).to be 1
       end
 
       it 'is idempotent' do
-        expect(db_num_passwords).to eql 0
+        expect(db_num_passwords).to be 0
         5.times { subject.save_password example_password }
-        expect(db_num_passwords).to eql 1
+        expect(db_num_passwords).to be 1
       end
     end
 
@@ -106,23 +102,23 @@ describe SecretStore::Store do
 
     describe '#save_secret' do
       it 'adds new secret to database' do
-        expect(db_num_secrets).to eql 0
+        expect(db_num_secrets).to be 0
         subject.save_secret(example_secret_1)
-        expect(db_num_secrets).to eql 1
+        expect(db_num_secrets).to be 1
       end
 
       it 'is idempotent' do
-        expect(db_num_secrets).to eql 0
+        expect(db_num_secrets).to be 0
         5.times { subject.save_secret(example_secret_1) }
-        expect(db_num_secrets).to eql 1
+        expect(db_num_secrets).to be 1
       end
 
       it 'adds new serets indexed by the label' do
-        expect(db_num_secrets).to eql 0
+        expect(db_num_secrets).to be 0
         subject.save_secret(example_secret_1)
-        expect(db_num_secrets).to eql 1
+        expect(db_num_secrets).to be 1
         subject.save_secret(example_secret_2)
-        expect(db_num_secrets).to eql 2
+        expect(db_num_secrets).to be 2
       end
     end
 
@@ -148,7 +144,7 @@ describe SecretStore::Store do
     end
 
     describe '#delete_secret' do
-      before :each do
+      before do
         subject.save_secret(example_secret_1)
         subject.save_secret(example_secret_2)
       end
@@ -156,7 +152,7 @@ describe SecretStore::Store do
       it 'makes no difference when there is no matching label' do
         subject.delete_secret('qwerty')
 
-        expect(db_num_secrets).to eql 2
+        expect(db_num_secrets).to be 2
 
         first_secret = subject.load_secret('example')
         expect(first_secret).to be_a SecretStore::Secret
@@ -170,7 +166,7 @@ describe SecretStore::Store do
       it 'removes an existing secret without affecting others' do
         subject.delete_secret('example')
 
-        expect(db_num_secrets).to eql 1
+        expect(db_num_secrets).to be 1
 
         first_secret = subject.load_secret('example')
         expect(first_secret).to be_nil
@@ -182,13 +178,10 @@ describe SecretStore::Store do
     end
 
     describe '#export_yaml' do
-      before :each do
+      before do
         @yaml_file = Tempfile.new('secret_store_test.yml').path
-        @store = SecretStore::Store.new(File.join(File.dirname(__FILE__), 'fixture_store.dat'))
-      end
-
-      before :each do
-        FileUtils.rm @yaml_file if File.exist?(@yaml_file)
+        @store = described_class.new(File.join(File.dirname(__FILE__), 'fixture_store.dat'))
+        FileUtils.rm_f @yaml_file
       end
 
       it 'writes a file' do
@@ -198,10 +191,10 @@ describe SecretStore::Store do
 
       it 'saves YAML data to the file' do
         @store.export_yaml(@yaml_file)
-        exported_data = YAML.safe_load(File.read(@yaml_file), permitted_classes: [Symbol])
+        exported_data = YAML.safe_load_file(@yaml_file, permitted_classes: [Symbol])
         expect(exported_data).to eql({ master_password: { bcrypt_salt: '$2a$14$.WO3JtKxNhzlASL4eQpkEO',
                                                           pbkdf2_salt: 'rCLPwKKsFb5WwgY1y0LwAQ==',
-                                                          test_encryption: '9_ZGG1_mabi9Q5qvxu4sOA== ~ k4TSdX28eTImvdDmzhtju-87-35msJBPilU_25JG6UE= ~ dKxORrEkMFsW_uAsr3fGHA==' },
+                                                          test_encryption: example_cipher },
                                        secrets: [
                                          { label: 'example',
                                            iv: 'u0CAnSPnSbN1sVi03_ck4A==',
@@ -222,7 +215,7 @@ describe SecretStore::Store do
         subject.save_secret(example_secret_2)
 
         got_secrets = subject.all_secrets
-        expect(got_secrets.count).to eql 2
+        expect(got_secrets.count).to be 2
 
         expected_plaintexts = [example_plaintext_1, example_plaintext_2]
         got_secrets.sort_by(&:label).zip(expected_plaintexts).each do |secret, plaintext|
