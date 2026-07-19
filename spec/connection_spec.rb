@@ -14,58 +14,58 @@ describe SecretStore::Connection do
   describe 'class methods' do
     describe '#new' do
       it 'connects to an existing store file' do
-        connection = SecretStore::Connection.new(store_fixture, example_password)
-        expect(connection).to be_a SecretStore::Connection
+        connection = described_class.new(store_fixture, example_password)
+        expect(connection).to be_a described_class
       end
 
       it 'fails to connect if the password is bad' do
         expect do
-          SecretStore::Connection.new(store_fixture, 'wrong')
+          described_class.new(store_fixture, 'wrong')
         end.to raise_error RuntimeError, /password/
       end
 
       it 'allows a new password on a new blank store' do
         store = SecretStore::Store.new(':memory:')
-        connection = SecretStore::Connection.new(store, 'another-password')
+        described_class.new(store, 'another-password')
         expect(store.load_password.activate_checksum('another-password')).to be_truthy
       end
     end
 
     describe '#load' do
       it 'connects to an existing store file' do
-        connection = SecretStore::Connection.load(sqlite_fixture, example_password)
-        expect(connection).to be_a SecretStore::Connection
+        connection = described_class.load(sqlite_fixture, example_password)
+        expect(connection).to be_a described_class
       end
 
       it 'fails to connect if the password is bad' do
         expect do
-          SecretStore::Connection.load(sqlite_fixture, 'wrong')
+          described_class.load(sqlite_fixture, 'wrong')
         end.to raise_error RuntimeError, /password/
       end
 
       it 'allows a new password on a new blank store' do
-        connection = SecretStore::Connection.load(':memory:', 'another-password')
+        connection = described_class.load(':memory:', 'another-password')
         expect(connection.store.load_password.activate_checksum('another-password')).to be_truthy
       end
     end
 
     describe '#init_from_yaml' do
       it 'generates a new store and populates with YAML data' do
-        connection = SecretStore::Connection.init_from_yaml(':memory:', example_password, yaml_fixture)
-        expect(connection).to be_a SecretStore::Connection
+        connection = described_class.init_from_yaml(':memory:', example_password, yaml_fixture)
+        expect(connection).to be_a described_class
         expect(connection.all_secret_labels).to match_array %w[example second]
       end
 
       it 'fails to import and connect if the password is bad' do
         expect do
-          SecretStore::Connection.init_from_yaml(':memory:', 'wrong-password', yaml_fixture)
+          described_class.init_from_yaml(':memory:', 'wrong-password', yaml_fixture)
         end.to raise_error RuntimeError, /password/
       end
     end
   end
 
   describe 'instance methods' do
-    subject { SecretStore::Connection.init_from_yaml(':memory:', example_password, yaml_fixture) }
+    subject { described_class.init_from_yaml(':memory:', example_password, yaml_fixture) }
 
     def num_secrets_in(db)
       db.execute('SELECT count(*) FROM secret').first.first
@@ -90,7 +90,7 @@ describe SecretStore::Connection do
         expect(subject.store.load_secret('example').decrypt_text(example_checksum)).to eql 'New message'
 
         db = subject.store.db
-        expect(num_secrets_in(db)).to eql 2
+        expect(num_secrets_in(db)).to be 2
       end
     end
 
@@ -127,10 +127,10 @@ describe SecretStore::Connection do
       it 'changes connection password required when connecting to the store again' do
         subject.change_password 'super-secret'
         expect do
-          SecretStore::Connection.new(subject.store, example_password)
+          described_class.new(subject.store, example_password)
         end.to raise_error RuntimeError, /password/
 
-        copy_connection = SecretStore::Connection.new(subject.store, 'super-secret')
+        copy_connection = described_class.new(subject.store, 'super-secret')
         expect(copy_connection.read_secret('example')).to eql example_plaintext_1
         expect(copy_connection.read_secret('second')).to eql example_plaintext_2
       end

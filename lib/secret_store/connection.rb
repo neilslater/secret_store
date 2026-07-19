@@ -62,7 +62,7 @@ module SecretStore
     # @return [String,nil] the plaintext content of secret or nil if no secret exists with that label
     #
     def read_secret(label)
-      if secret = store.load_secret(label)
+      if (secret = store.load_secret(label))
         secret.decrypt_text(encrypt_checksum)
       end
     end
@@ -111,15 +111,13 @@ module SecretStore
     end
 
     def ensure_password(password_text)
-      if pw = store.load_password
-        pw.activate_checksum password_text
-      else
+      unless (pw = store.load_password)
         raise 'Password too short. Minimum 8 characters.' if password_text.length < 8
 
         pw = SecretStore::Password.create(password_text)
         store.save_password(pw)
-        pw.activate_checksum password_text
       end
+      pw.activate_checksum password_text
       pw
     end
   end

@@ -36,11 +36,12 @@ module SecretStore
     # @param [String] test_encryption three-part encrypted data to test against supplied password
     # @return [SecretStore::Password]
     def initialize(bcrypt_salt, pbkdf2_salt, test_encryption)
-      if BCrypt::Engine.valid_salt?(bcrypt_salt) && bcrypt_salt.length == 29
-        @bcrypt_salt = bcrypt_salt
-      else
+      unless BCrypt::Engine.valid_salt?(bcrypt_salt) && bcrypt_salt.length == 29
         raise "Bad bcrypt_salt '#{bcrypt_salt}'"
       end
+
+      @bcrypt_salt = bcrypt_salt
+
       raise 'Unexpected size of PBKDF salt' if decode_bytes(pbkdf2_salt).length != 16
 
       @pbkdf2_salt = pbkdf2_salt
@@ -102,6 +103,7 @@ module SecretStore
       end
       [iv_b64, crypted_text_b64, auth_tag_b64].join(' ~ ')
     end
+    private_class_method :create_test_encryption
 
     def verify_test_encryption(passcode, test_text)
       key = key_from_checksum(passcode, decode_bytes(pbkdf2_salt))
