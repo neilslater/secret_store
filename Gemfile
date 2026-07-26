@@ -5,6 +5,7 @@ source 'https://rubygems.org'
 gem 'base64'
 gem 'bcrypt', '>=3.1.11'
 gem 'bundler', '>=1.10.6'
+gem 'irb'
 gem 'rake', '>=11.2.2'
 gem 'rspec', '>=3.5.0'
 gem 'rubocop', require: false

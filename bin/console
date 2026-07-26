@@ -15,30 +15,13 @@ module IRB
   def self.start_secret_store
     $stdout.sync = true
 
-    IRB.init_config(nil)
-    IRB.init_error
-    IRB.parse_opts
-    # IRB.run_config
-    IRB.load_modules
+    IRB.setup(nil)
 
     SECRET_STORE_CONF.each do |k, v|
       IRB.conf[k] = v
     end
 
-    irb = Irb.new
-    @CONF[:MAIN_CONTEXT] = irb.context
-
-    trap('SIGINT') do
-      irb.signal_handle
-    end
-
-    begin
-      catch(:IRB_EXIT) do
-        irb.eval_input
-      end
-    ensure
-      irb_at_exit
-    end
+    Irb.new.run(IRB.conf)
   end
 end
 
