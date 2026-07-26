@@ -31,6 +31,20 @@ describe SecretStore::Secret do
         secret = described_class.from_h(h)
         expect(secret.decrypt_text(example_checksum)).to eql example_plaintext
       end
+
+      it 'rejects serialisations missing required fields' do
+        h = { label: example_label,
+              iv: example_iv,
+              pbkdf2_salt: example_pbkdf2_salt,
+              crypted_text: example_crypted_text,
+              auth_tag: example_auth_tag }
+
+        %i[label iv crypted_text].each do |property|
+          expect do
+            described_class.from_h(h.reject { |key, _value| key == property })
+          end.to raise_error RuntimeError, /Missing hash key #{property}/
+        end
+      end
     end
 
     describe '#create_from_plaintext' do

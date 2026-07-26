@@ -9,6 +9,30 @@ on:
     - cron: '0 6 3 * *'
 
 jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+      - run: bundle exec bundle-audit check --update
+
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+      - name: Check YARD documentation coverage
+        run: |
+          set -o pipefail
+          bundle exec yard stats --list-undoc --fail-on-warning | tee "$RUNNER_TEMP/yard-stats.txt"
+          grep -Fq '100.00% documented' "$RUNNER_TEMP/yard-stats.txt"
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -20,7 +44,7 @@ jobs:
           - '4.0'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
