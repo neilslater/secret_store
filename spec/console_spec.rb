@@ -16,12 +16,15 @@ describe 'console' do
 
     output = +''
     process_status = nil
-    environment = { 'SECRET_STORE_FILE' => store.path }
+    environment = { 'IRB_USE_AUTOCOMPLETE' => 'false',
+                    'NO_COLOR' => '1',
+                    'SECRET_STORE_FILE' => store.path,
+                    'TERM' => 'dumb' }
     PTY.spawn(environment, File.expand_path('../console', __dir__)) do |reader, writer, process_id|
       Timeout.timeout(15) do
         output << reader.readpartial(1024) until output.include?('Password:')
         writer.puts 'QwertyUiop'
-        output << reader.readpartial(1024) until output.match?(/secret_store.*>\s*\z/)
+        output << reader.readpartial(1024) until output.include?('secret_store(main):001>')
         writer.puts 'exit'
         writer.close
         begin
