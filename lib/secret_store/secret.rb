@@ -80,7 +80,7 @@ module SecretStore
     # same or different to original one. The initial value for encryption
     # is re-generated automatically using SecureRandom (so even if key and message are identical
     # to original, the encryption will be different)
-    # @param [String] new_plaintext plaintext version of new message
+    # @param [String] new_text plaintext version of new message
     # @param [String] checksum secure string calculated from original password
     # @return [SecretStore::Secret] self
     def replace_text(new_text, checksum)
