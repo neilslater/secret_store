@@ -60,6 +60,19 @@ describe SecretStore::Store do
         expect(store.load_secret('example').to_h).to eql example_secret_1.to_h
         expect(store.load_secret('second').to_h).to eql example_secret_2.to_h
       end
+
+      it 'accepts an empty export' do
+        yaml_file = Tempfile.new('empty_secret_store.yml')
+        yaml_file.write(YAML.dump({}))
+        yaml_file.close
+
+        store = described_class.import_yaml(yaml_file.path, ':memory:')
+
+        expect(store.load_password).to be_nil
+        expect(store.all_secrets).to be_empty
+      ensure
+        yaml_file&.unlink
+      end
     end
   end
 

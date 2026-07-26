@@ -13,6 +13,12 @@ describe SecretStore::Connection do
 
   describe 'class methods' do
     describe '#new' do
+      it 'rejects objects which are not stores' do
+        expect do
+          described_class.new(Object.new, example_password)
+        end.to raise_error RuntimeError, /Expected a SecretStore::Store/
+      end
+
       it 'connects to an existing store file' do
         connection = described_class.new(store_fixture, example_password)
         expect(connection).to be_a described_class
@@ -28,6 +34,12 @@ describe SecretStore::Connection do
         store = SecretStore::Store.new(':memory:')
         described_class.new(store, 'another-password')
         expect(store.load_password.activate_checksum('another-password')).to be_truthy
+      end
+
+      it 'rejects a short password for a new store' do
+        expect do
+          described_class.new(SecretStore::Store.new(':memory:'), 'short')
+        end.to raise_error RuntimeError, /Password too short/
       end
     end
 
@@ -118,6 +130,12 @@ describe SecretStore::Connection do
     end
 
     describe '#change_password' do
+      it 'rejects a short new password' do
+        expect do
+          subject.change_password 'short'
+        end.to raise_error RuntimeError, /Password too short/
+      end
+
       it 'still allows reading current secrets' do
         subject.change_password 'super-secret'
         expect(subject.read_secret('example')).to eql example_plaintext_1
