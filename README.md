@@ -35,6 +35,8 @@ use of the product, where this Ruby script is vulnerable.
 
 ## Usage
 
+SecretStore requires Ruby 3.3 or newer.
+
 ### Command line console app (uses irb, with command history disabled)
 
     ./console [secrets_file]

@@ -3,14 +3,6 @@
 require 'spec_helper'
 
 describe SecretStore::Connection do
-  let(:example_password) { 'QwertyUiop' }
-  let(:example_checksum) { '3EG3i1.oq1T5cmZVlq.cnOt28gz6U8G' }
-  let(:example_plaintext_1) { 'This is a secret!' }
-  let(:example_plaintext_2) { 'This is a second secret!' }
-  let(:sqlite_fixture) { File.join(File.dirname(__FILE__), 'fixture_store.dat') }
-  let(:yaml_fixture) { File.join(File.dirname(__FILE__), 'fixture_store.yml') }
-  let(:store_fixture) { SecretStore::Store.import_yaml(yaml_fixture, ':memory:') }
-
   describe 'class methods' do
     describe '#new' do
       it 'rejects objects which are not stores' do
@@ -20,13 +12,13 @@ describe SecretStore::Connection do
       end
 
       it 'connects to an existing store file' do
-        connection = described_class.new(store_fixture, example_password)
+        connection = described_class.new(memory_store_fixture, example_password)
         expect(connection).to be_a described_class
       end
 
       it 'fails to connect if the password is bad' do
         expect do
-          described_class.new(store_fixture, 'wrong')
+          described_class.new(memory_store_fixture, 'wrong')
         end.to raise_error RuntimeError, /password/
       end
 
@@ -62,7 +54,7 @@ describe SecretStore::Connection do
     end
 
     describe '#init_from_yaml' do
-      it 'generates a new store and populates with YAML data' do
+      it 'generates a new store and populates with YAML data', :aggregate_failures do
         connection = described_class.init_from_yaml(':memory:', example_password, yaml_fixture)
         expect(connection).to be_a described_class
         expect(connection.all_secret_labels).to match_array %w[example second]
@@ -77,80 +69,82 @@ describe SecretStore::Connection do
   end
 
   describe 'instance methods' do
-    subject { described_class.init_from_yaml(':memory:', example_password, yaml_fixture) }
+    subject(:connection) { described_class.init_from_yaml(':memory:', example_password, yaml_fixture) }
 
-    def num_secrets_in(db)
-      db.execute('SELECT count(*) FROM secret').first.first
+    def num_secrets_in(database)
+      database.execute('SELECT count(*) FROM secret').first.first
     end
 
     describe '#write_secret' do
       it 'adds a new secret to the database, if the label is new' do
-        db = subject.store.db
+        database = connection.store.db
         expect do
-          subject.write_secret 'new_label', 'New message'
-        end.to change { num_secrets_in(db) }.by 1
+          connection.write_secret 'new_label', 'New message'
+        end.to change { num_secrets_in(database) }.by 1
       end
 
       it 'adds the new secret so that it can be decrypted' do
-        subject.write_secret 'new_label', 'New message'
-        expect(subject.store.load_secret('new_label').decrypt_text(example_checksum)).to eql 'New message'
+        connection.write_secret 'new_label', 'New message'
+        expect(connection.store.load_secret('new_label').decrypt_text(example_checksum)).to eql 'New message'
       end
 
-      it 'over-writes an existing secret' do
-        expect(subject.store.load_secret('example').decrypt_text(example_checksum)).to eql example_plaintext_1
-        subject.write_secret 'example', 'New message'
-        expect(subject.store.load_secret('example').decrypt_text(example_checksum)).to eql 'New message'
-
-        db = subject.store.db
-        expect(num_secrets_in(db)).to be 2
+      it 'over-writes an existing secret', :aggregate_failures do
+        expect(connection.store.load_secret('example').decrypt_text(example_checksum)).to eql primary_plaintext
+        connection.write_secret 'example', 'New message'
+        expect(connection.store.load_secret('example').decrypt_text(example_checksum)).to eql 'New message'
+        database = connection.store.db
+        expect(num_secrets_in(database)).to be 2
       end
     end
 
     describe '#read_secret' do
-      it 'decrypts secret from database' do
-        expect(subject.read_secret('example')).to eql example_plaintext_1
-        expect(subject.read_secret('second')).to eql example_plaintext_2
+      it 'decrypts secret from database', :aggregate_failures do
+        expect(connection.read_secret('example')).to eql primary_plaintext
+        expect(connection.read_secret('second')).to eql secondary_plaintext
       end
     end
 
     describe '#delete_secret' do
-      it 'removes secret from database' do
-        subject.delete_secret 'example'
-        expect(subject.read_secret('example')).to be_nil
-        expect(subject.read_secret('second')).to eql example_plaintext_2
+      it 'removes secret from database', :aggregate_failures do
+        connection.delete_secret 'example'
+        expect(connection.read_secret('example')).to be_nil
+        expect(connection.read_secret('second')).to eql secondary_plaintext
       end
     end
 
     describe '#all_secret_labels' do
-      it 'lists all known labels' do
-        expect(subject.all_secret_labels).to match_array %w[example second]
-        subject.write_secret 'third', 'Third secret message'
-        expect(subject.all_secret_labels).to match_array %w[example second third]
+      it 'lists all known labels', :aggregate_failures do
+        expect(connection.all_secret_labels).to match_array %w[example second]
+        connection.write_secret 'third', 'Third secret message'
+        expect(connection.all_secret_labels).to match_array %w[example second third]
       end
     end
 
     describe '#change_password' do
       it 'rejects a short new password' do
         expect do
-          subject.change_password 'short'
+          connection.change_password 'short'
         end.to raise_error RuntimeError, /Password too short/
       end
 
-      it 'still allows reading current secrets' do
-        subject.change_password 'super-secret'
-        expect(subject.read_secret('example')).to eql example_plaintext_1
-        expect(subject.read_secret('second')).to eql example_plaintext_2
+      it 'still allows reading current secrets', :aggregate_failures do
+        connection.change_password 'super-secret'
+        expect(connection.read_secret('example')).to eql primary_plaintext
+        expect(connection.read_secret('second')).to eql secondary_plaintext
       end
 
-      it 'changes connection password required when connecting to the store again' do
-        subject.change_password 'super-secret'
+      it 'rejects the old password after a change' do
+        connection.change_password 'super-secret'
         expect do
-          described_class.new(subject.store, example_password)
+          described_class.new(connection.store, example_password)
         end.to raise_error RuntimeError, /password/
+      end
 
-        copy_connection = described_class.new(subject.store, 'super-secret')
-        expect(copy_connection.read_secret('example')).to eql example_plaintext_1
-        expect(copy_connection.read_secret('second')).to eql example_plaintext_2
+      it 'accepts the new password after a change' do
+        connection.change_password 'super-secret'
+        reconnected = described_class.new(connection.store, 'super-secret')
+        expect([reconnected.read_secret('example'), reconnected.read_secret('second')])
+          .to eql [primary_plaintext, secondary_plaintext]
       end
     end
   end

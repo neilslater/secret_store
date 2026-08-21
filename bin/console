@@ -5,6 +5,7 @@ require 'secret_store'
 require 'irb'
 require 'irb/completion'
 
+# IRB configuration for the SecretStore console.
 module IRB
   SECRET_STORE_CONF = { PROMPT_MODE: :DEFAULT,
                         IRB_NAME: 'secret_store',
@@ -25,7 +26,9 @@ module IRB
   end
 end
 
-extend SecretStore
+class << self
+  include SecretStore
+end
 
 secrets_file = ARGV.first || default_secrets_file
 
