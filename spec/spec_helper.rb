@@ -10,3 +10,9 @@ end
 
 $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 require 'secret_store'
+require_relative 'support/console_session'
+require_relative 'support/secret_store_fixtures'
+
+RSpec.configure do |config|
+  config.include SecretStoreFixtures
+end

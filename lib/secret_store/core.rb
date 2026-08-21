@@ -43,16 +43,16 @@ module SecretStore
     # Create encrypted version of input String.
     # @param [String] plaintext message to encrypt
     # @param [String] key secret key used by cipher
-    # @param [String] iv initial value (non-secret, but important to use unique initial values to avoid
+    # @param [String] initialization_vector initial value (non-secret, but important to use unique values to avoid
     #   giving away parts of messages)
     # @param [String] auth_data authentication data which must be same for encrypt and decrypt
     # @return [Array<String>] encrypted text and auth_tag values
     #
-    def encrypt_string(plaintext, key, iv, auth_data = '')
+    def encrypt_string(plaintext, key, initialization_vector, auth_data = '')
       cipher = OpenSSL::Cipher.new(CIPHER_TYPE)
       cipher.encrypt
       cipher.key = key
-      cipher.iv = iv[0, IV_LENGTH]
+      cipher.iv = initialization_vector[0, IV_LENGTH]
       cipher.auth_data = auth_data
 
       encrypted = cipher.update(plaintext) + cipher.final
@@ -63,15 +63,15 @@ module SecretStore
     # @param [String] ciphertext encrypted message
     # @param [String] auth_tag authentication data (for detecting tampering)
     # @param [String] key secret key used by cipher, must be same as used to create ciphertext
-    # @param [String] iv initial value, must be same as used to create ciphertext
+    # @param [String] initialization_vector initial value, must be same as used to create ciphertext
     # @param [String] auth_data authentication data which must be same for encrypt and decrypt
     # @return [String] plaintext decrypted from the ciphertext
     #
-    def decrypt_string(ciphertext, auth_tag, key, iv, auth_data = '')
+    def decrypt_string(ciphertext, auth_tag, key, initialization_vector, auth_data = '')
       cipher = OpenSSL::Cipher.new(CIPHER_TYPE)
       cipher.decrypt
       cipher.key = key
-      cipher.iv = iv[0, IV_LENGTH]
+      cipher.iv = initialization_vector[0, IV_LENGTH]
 
       cipher.auth_tag = auth_tag
       cipher.auth_data = auth_data

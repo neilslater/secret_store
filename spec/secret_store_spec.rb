@@ -12,6 +12,14 @@ describe SecretStore do
     expect(SecretStore::VERSION).not_to be_nil
   end
 
+  context 'when running the console executable' do
+    it 'exits cleanly from an empty session', :aggregate_failures do
+      output, process_status = ConsoleSession.new.run
+      expect(process_status).to be_success
+      expect(output).not_to include('NameError')
+    end
+  end
+
   describe 'console helpers' do
     before do
       allow($stdin).to receive(:noecho).and_return("QwertyUiop\n")
@@ -49,7 +57,7 @@ describe SecretStore do
     end
 
     describe '#connect_secret_store' do
-      it 'loads the store using the entered password' do
+      it 'loads the store using the entered password', :aggregate_failures do
         expect(console.connect_secret_store('/tmp/secrets.dat')).to eq connection
         expect(SecretStore::Connection).to have_received(:load).with('/tmp/secrets.dat', 'QwertyUiop')
       end
@@ -61,24 +69,24 @@ describe SecretStore do
         console.connect_secret_store('/tmp/secrets.dat')
       end
 
-      it 'exports secrets and returns the export filename' do
+      it 'exports secrets and returns the export filename', :aggregate_failures do
         expect(console.export_secrets('/tmp/export.yml')).to eq '/tmp/export.yml'
         expect(store).to have_received(:export_yaml).with('/tmp/export.yml')
       end
 
-      it 'writes secrets using string labels' do
+      it 'writes secrets using string labels', :aggregate_failures do
         expect(console.write_secret(123, 'content')).to be_nil
         expect(connection).to have_received(:write_secret).with('123', 'content')
       end
 
-      it 'reads secrets using string labels' do
+      it 'reads secrets using string labels', :aggregate_failures do
         allow(connection).to receive(:read_secret).with('123').and_return('content')
 
         expect(console.read_secret(123)).to eq 'content'
         expect(connection).to have_received(:read_secret).with('123')
       end
 
-      it 'deletes secrets using string labels' do
+      it 'deletes secrets using string labels', :aggregate_failures do
         expect(console.delete_secret(123)).to be_nil
         expect(connection).to have_received(:delete_secret).with('123')
       end
@@ -95,7 +103,7 @@ describe SecretStore do
         console.connect_secret_store('/tmp/secrets.dat')
       end
 
-      it 'changes the connection password when entries match' do
+      it 'changes the connection password when entries match', :aggregate_failures do
         allow($stdin).to receive(:noecho).and_return("new-password\n")
 
         expect(console.change_password).to be_nil

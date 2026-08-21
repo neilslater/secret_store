@@ -26,17 +26,17 @@ module SecretStore
 
     # Writes master password object to store. There is only ever one password object stored, so
     # all calls to save_password will overwrite existing data.
-    # @param [SecretStore::Password] pw password object to be persisted
+    # @param [SecretStore::Password] password password object to be persisted
     # @return [nil]
-    def save_password(pw)
-      pw_hash = pw.to_h
+    def save_password(password)
+      password_hash = password.to_h
       existing = db.execute('SELECT bcrypt_salt FROM master_password WHERE id = 1')
       if existing.empty?
         db.execute('INSERT INTO master_password (id, bcrypt_salt, pbkdf2_salt, test_encryption) VALUES ( 1, ?, ?, ? )',
-                   hash_to_array(pw_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
+                   hash_to_array(password_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
       else
         db.execute('UPDATE master_password SET bcrypt_salt=?, pbkdf2_salt=?, test_encryption=? WHERE id=1',
-                   hash_to_array(pw_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
+                   hash_to_array(password_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
       end
       nil
     end
@@ -54,15 +54,8 @@ module SecretStore
     # @return [nil]
     def save_secret(secret)
       secret_hash = secret.to_h
-      label = secret_hash[:label]
-      existing = db.execute('SELECT label FROM secret WHERE label = ?', [label])
-      if existing.empty?
-        db.execute('INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)',
-                   hash_to_array(secret_hash, %i[label iv pbkdf2_salt crypted_text auth_tag]))
-      else
-        db.execute('UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=?, auth_tag=? WHERE label=?',
-                   hash_to_array(secret_hash, %i[iv pbkdf2_salt crypted_text auth_tag label]))
-      end
+      existing = db.execute('SELECT label FROM secret WHERE label = ?', [secret_hash[:label]])
+      existing.empty? ? insert_secret(secret_hash) : update_secret(secret_hash)
       nil
     end
 
@@ -108,19 +101,13 @@ module SecretStore
     def self.import_yaml(yaml_file, db_connect)
       store = new(db_connect)
       all_data = YAML.safe_load_file(yaml_file, permitted_classes: [Symbol])
-
-      if (pw_hash = all_data[:master_password])
-        pw = SecretStore::Password.from_h(pw_hash)
-        store.save_password pw
-      end
-
+      password_hash = all_data[:master_password]
+      store.save_password SecretStore::Password.from_h(password_hash) if password_hash
       if (secret_hashes = all_data[:secrets])
         secret_hashes.each do |secret_hash|
-          secret = SecretStore::Secret.from_h(secret_hash)
-          store.save_secret secret
+          store.save_secret SecretStore::Secret.from_h(secret_hash)
         end
       end
-
       store
     end
 
@@ -143,7 +130,22 @@ module SecretStore
       keys.zip(array).to_h
     end
 
+    def insert_secret(secret_hash)
+      db.execute('INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)',
+                 hash_to_array(secret_hash, %i[label iv pbkdf2_salt crypted_text auth_tag]))
+    end
+
+    def update_secret(secret_hash)
+      db.execute('UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=?, auth_tag=? WHERE label=?',
+                 hash_to_array(secret_hash, %i[iv pbkdf2_salt crypted_text auth_tag label]))
+    end
+
     def create_tables
+      create_master_password_table
+      create_secret_table
+    end
+
+    def create_master_password_table
       db.execute <<-SQL
         CREATE TABLE IF NOT EXISTS master_password (
         id INTEGER PRIMARY KEY,
@@ -151,7 +153,9 @@ module SecretStore
         pbkdf2_salt VARCHAR(20) NOT NULL,
         test_encryption TEXT NOT NULL);
       SQL
+    end
 
+    def create_secret_table
       db.execute <<-SQL
         CREATE TABLE IF NOT EXISTS secret (
         label VARCHAR(50) PRIMARY KEY,
