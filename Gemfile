@@ -19,6 +19,6 @@ gem 'yard', '>=0.8.7.6'
 group :development do
   gem 'ncs_rubocop_conf',
       github: 'neilslater/ncs_rubocop_conf',
-      tag: 'v0.2.0',
+      tag: 'v0.2.1',
       require: false
 end
