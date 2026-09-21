@@ -53,6 +53,14 @@ of SQLite database. You will be prompted for a password. For initial file, this 
 in use. For existing file, the password must match (this is not the protection for the content,
 it is to ensure all key generation works from the same initial password).
 
+The wrapper uses the committed bundle and resolves application files relative to itself.
+Relative database paths remain relative to your working directory. User IRB startup RC
+files are disabled, as is disk command history. Password entry uses a fixed acknowledgement;
+EOF raises `EOFError` before loading or changing a store, and terminal echo is restored by
+`IO#noecho` on EOF or interruption. Object inspection and pretty printing omit derived keys.
+This does not erase in-memory values, hide typed Ruby commands or deliberate secret reads,
+or protect terminal scrollback. IRB remains an unrestricted Ruby session.
+
 This is just a Ruby ```irb``` session with a few added methods for managing secrets. The available
 methods are explained on successful start. All parameters should be Strings.
 

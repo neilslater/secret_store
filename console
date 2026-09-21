@@ -1,1 +1,4 @@
-ruby -Ilib bin/console
+#!/bin/sh
+app_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || exit 1
+export BUNDLE_GEMFILE="$app_dir/Gemfile"
+exec bundle exec ruby -I"$app_dir/lib" "$app_dir/bin/console" "$@"

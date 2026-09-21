@@ -89,6 +89,19 @@ module SecretStore
       new(attributes[:bcrypt_salt], attributes[:pbkdf2_salt], attributes[:test_encryption])
     end
 
+    # Safe diagnostic representation, excluding key material and nested objects.
+    # @return [String] redacted representation
+    def inspect
+      "#<SecretStore::Password activated=#{!checksum.nil?}>"
+    end
+
+    # Use the same redaction for PP and IRB result formatting.
+    # @param [PP] printer pretty-printing output
+    # @return [void]
+    def pretty_print(printer)
+      printer.text(inspect)
+    end
+
     private
 
     def self.create_test_encryption(passcode, pbkdf2_salt)

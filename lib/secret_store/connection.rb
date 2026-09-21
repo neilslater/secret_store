@@ -19,7 +19,7 @@ module SecretStore
     # @return [SecretStore::Connection] connected database with password set for decryption
     #
     def initialize(store, password_text)
-      raise "Expected a SecretStore::Store, got #{store.inspect}" unless store.is_a? SecretStore::Store
+      raise 'Expected a SecretStore::Store' unless store.is_a? SecretStore::Store
 
       @store = store
       @password = ensure_password(password_text)
@@ -102,6 +102,19 @@ module SecretStore
       store.save_password(new_password)
 
       @password = new_password
+    end
+
+    # Safe diagnostic representation, excluding key material and nested objects.
+    # @return [String] redacted representation
+    def inspect
+      '#<SecretStore::Connection>'
+    end
+
+    # Use the same redaction for PP and IRB result formatting.
+    # @param [PP] printer pretty-printing output
+    # @return [void]
+    def pretty_print(printer)
+      printer.text(inspect)
     end
 
     private

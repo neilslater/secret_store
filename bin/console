@@ -16,7 +16,7 @@ module IRB
   def self.start_secret_store
     $stdout.sync = true
 
-    IRB.setup(nil)
+    IRB.setup(nil, argv: ['-f'])
 
     SECRET_STORE_CONF.each do |k, v|
       IRB.conf[k] = v

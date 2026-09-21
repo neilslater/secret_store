@@ -41,9 +41,7 @@ module SecretStore
   # @return [SecretStore::Connection] connected secret store
   #
   def connect_secret_store(secrets_file = default_secrets_file)
-    print 'Password: '
-    password = $stdin.noecho(&:gets).chomp
-    puts '*' * password.length
+    password = prompt_password('Password: ')
     @connection = SecretStore::Connection.load(secrets_file, password)
   end
 
@@ -95,13 +93,8 @@ module SecretStore
   # @return [nil]
   #
   def change_password
-    print 'New password: '
-    new_password = $stdin.noecho(&:gets).chomp
-    puts '*' * new_password.length
-
-    print 'Repeat new password: '
-    verify_new_password = $stdin.noecho(&:gets).chomp
-    puts '*' * verify_new_password.length
+    new_password = prompt_password('New password: ')
+    verify_new_password = prompt_password('Repeat new password: ')
 
     raise 'Passwords do not match' if new_password != verify_new_password
 
@@ -121,5 +114,18 @@ module SecretStore
     puts '  all_secret_labels'
     puts '  change_password'
     puts "  export_secrets ['export_yaml_file']"
+  end
+
+  private
+
+  def prompt_password(prompt)
+    value = $stdin.noecho do |input|
+      print prompt
+      input.gets
+    end
+    raise EOFError, 'Password entry cancelled' unless value
+
+    puts '[received]'
+    value.chomp
   end
 end
