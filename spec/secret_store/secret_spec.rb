@@ -19,7 +19,7 @@ describe SecretStore::Secret do
       end
 
       it 'rejects serialisations missing required fields' do
-        %i[label iv crypted_text].each do |property|
+        %i[label iv pbkdf2_salt crypted_text auth_tag].each do |property|
           expect { described_class.from_h(serialized_secret_attributes.except(property)) }
             .to raise_error RuntimeError, /Missing hash key #{property}/
         end

@@ -21,7 +21,7 @@ module SecretStore
     # Number of iterations to use when deriving a key from password's checksum
     PBKDF_ITERATIONS = 10_000
 
-    # Number of bytes to use for IV with this cipher
+    # Effective nonce length; stored legacy IVs contain 16 bytes, of which the first 12 are used
     IV_LENGTH = 12
 
     # Convert String of arbitrary bytes to String suitable for storing. Inverse of decode_bytes.
@@ -59,7 +59,7 @@ module SecretStore
       [encrypted, cipher.auth_tag]
     end
 
-    # Create encrypted version of input String.
+    # Decrypt and authenticate input; no plaintext is returned until authentication succeeds.
     # @param [String] ciphertext encrypted message
     # @param [String] auth_tag authentication data (for detecting tampering)
     # @param [String] key secret key used by cipher, must be same as used to create ciphertext
@@ -68,6 +68,8 @@ module SecretStore
     # @return [String] plaintext decrypted from the ciphertext
     #
     def decrypt_string(ciphertext, auth_tag, key, initialization_vector, auth_data = '')
+      raise FormatError, 'auth_tag must contain 16 bytes' unless auth_tag.is_a?(String) && auth_tag.bytesize == 16
+
       cipher = OpenSSL::Cipher.new(CIPHER_TYPE)
       cipher.decrypt
       cipher.key = key

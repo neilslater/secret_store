@@ -4,9 +4,13 @@ require 'bcrypt'
 require 'io/console'
 require 'secret_store/version'
 require 'secret_store/core'
+require 'secret_store/record_validation'
 require 'secret_store/secret'
 require 'secret_store/password'
+require 'secret_store/backup_file'
+require 'secret_store/database_file'
 require 'secret_store/store'
+require 'secret_store/restoration'
 require 'secret_store/connection'
 
 # Top-level methods in this module are imported into main Object in the console application. They
@@ -40,9 +44,7 @@ module SecretStore
   # @return [SecretStore::Connection] connected secret store
   #
   def connect_secret_store(secrets_file = default_secrets_file)
-    print 'Password: '
-    password = $stdin.noecho(&:gets).chomp
-    puts '*' * password.length
+    password = prompt_password('Password: ')
     @connection = SecretStore::Connection.load(secrets_file, password)
   end
 
@@ -67,7 +69,7 @@ module SecretStore
 
   # Reads secret associated with given label.
   # @param [String] label identifier for the secret
-  # @return [String] plaintext value of the secret, as decrypted from the store
+  # @return [String,nil] decrypted plaintext, or nil when the label is absent
   #
   def read_secret(label)
     @connection.read_secret label.to_s
@@ -94,13 +96,8 @@ module SecretStore
   # @return [nil]
   #
   def change_password
-    print 'New password: '
-    new_password = $stdin.noecho(&:gets).chomp
-    puts '*' * new_password.length
-
-    print 'Repeat new password: '
-    verify_new_password = $stdin.noecho(&:gets).chomp
-    puts '*' * verify_new_password.length
+    new_password = prompt_password('New password: ')
+    verify_new_password = prompt_password('Repeat new password: ')
 
     raise 'Passwords do not match' if new_password != verify_new_password
 
@@ -120,5 +117,18 @@ module SecretStore
     puts '  all_secret_labels'
     puts '  change_password'
     puts "  export_secrets ['export_yaml_file']"
+  end
+
+  private
+
+  def prompt_password(prompt)
+    value = $stdin.noecho do |input|
+      print prompt
+      input.gets
+    end
+    raise EOFError, 'Password entry cancelled' unless value
+
+    puts '[received]'
+    value.chomp
   end
 end

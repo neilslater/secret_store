@@ -57,6 +57,12 @@ describe SecretStore do
     end
 
     describe '#connect_secret_store' do
+      it 'cancels on EOF without opening a store', :aggregate_failures do
+        allow($stdin).to receive(:noecho).and_return(nil)
+        expect { console.connect_secret_store('/tmp/secrets.dat') }.to raise_error(EOFError, /cancelled/)
+        expect(SecretStore::Connection).not_to have_received(:load)
+      end
+
       it 'loads the store using the entered password', :aggregate_failures do
         expect(console.connect_secret_store('/tmp/secrets.dat')).to eq connection
         expect(SecretStore::Connection).to have_received(:load).with('/tmp/secrets.dat', 'QwertyUiop')
@@ -108,6 +114,14 @@ describe SecretStore do
 
         expect(console.change_password).to be_nil
         expect(connection).to have_received(:change_password).with('new-password')
+      end
+
+      [[], ["new-password\n"]].each do |entries|
+        it 'cancels on EOF without changing the password', :aggregate_failures do
+          allow($stdin).to receive(:noecho).and_return(*entries, nil)
+          expect { console.change_password }.to raise_error(EOFError, /cancelled/)
+          expect(connection).not_to have_received(:change_password)
+        end
       end
 
       it 'rejects mismatched entries' do

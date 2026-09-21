@@ -45,7 +45,9 @@ module SecretStoreFixtures
   end
 
   def sqlite_fixture
-    File.expand_path('../fixture_store.dat', __dir__)
+    @sqlite_fixture ||= File.join(test_directory, 'fixture_store.dat').tap do |path|
+      FileUtils.cp(File.expand_path('../fixture_store.dat', __dir__), path)
+    end
   end
 
   def yaml_fixture
