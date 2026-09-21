@@ -1,28 +1,29 @@
 # SecretStore
 
-[![Build Status](https://travis-ci.org/neilslater/secret_store.png?branch=master)](http://travis-ci.org/neilslater/secret_store)
+[![CI](https://github.com/neilslater/secret_store/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/neilslater/secret_store/actions/workflows/ci.yml)
 
-Ruby project for storing small secret messages accessed with a master password, using standard cryptgraphic components.
-This is a hobby project to help understand correct use of those components.
+Ruby application for storing small secret messages accessed with a master password, using
+standard cryptographic components. This is a hobby project for learning their correct use.
+It runs from this repository; it is not currently packaged or published as a RubyGem.
 
-It can be used like a password locker, with all passwords stored under logical keys. The level of
-secrecy using encryption at rest is essentially as strong as the master password used.
+## Security and storage
 
-The base encryption uses OpenSSL library AES 256 GCM, and keys are derived from a master password
-using Bcrypt to generate an interim master checksum, followed by PBKDF2 HMAC SHA256 to convert that
-checksum into a unique key per stored secret. The master password is also verified against a
-stored random message - this is so that all messages are encrypted based on the same master password.
+Secret payloads are encrypted with OpenSSL AES-256-GCM. BCrypt (default cost 14) derives
+an interim master checksum, and PBKDF2-HMAC-SHA256 with 10,000 iterations derives each
+32-byte encryption key using a random salt. A stored random encrypted message verifies
+the master password. The cipher, derivation parameters, SQLite schema, and encrypted
+compatibility fixtures retain their existing representation.
 
-When the application is not in use, the stored secrets in the database
-or exported as YAML should be inaccessible without the master password, and brute-forcing that password
-is made harder by use of a moderately high Bcrypt work factor (14).
+Labels are authenticated but readable. Secret counts, ciphertext lengths, salts, IVs,
+and password-verification material are also visible in SQLite files and YAML backups.
+The format detects authenticated-record tampering during decryption, but does not prove
+whole-store completeness or freshness: deletion, rollback, and replacement with an older
+valid record are not detected. Password rotation does not revoke old backups, which still
+require the password used when they were created.
 
-Note this project cannot protect against compromised host environment whilst running - e.g. a keylogger,
-code insertion into Ruby, or targetting code in this library installed on the host machine are all attacks that can be used to
-obtain the master password.
-
-There is no way to recover from a forgotten password - if that happens your secrets will
-become unreadable.
+The application cannot protect a compromised host or Ruby process. A keylogger, injected
+code, or modified library can capture plaintext or derived keys. There is no password
+recovery mechanism; a forgotten password makes its encrypted secrets unreadable.
 
 Encrypted records require complete fields, valid URL-safe Base64, 16-byte PBKDF2 salts,
 and full 16-byte GCM authentication tags. Malformed records raise `SecretStore::FormatError`
@@ -30,6 +31,8 @@ and full 16-byte GCM authentication tags. Malformed records raise `SecretStore::
 must succeed with the key before plaintext is returned. Secret replacement leaves the
 original encrypted record unchanged if encryption fails. Writers retain the legacy
 16-byte stored IV representation and use its first 12 bytes as the GCM nonce.
+
+## Transactions
 
 Connection operations use SQLite transactions. Password rotation commits all encrypted
 records and the new password together, then publishes the new session key. Reads, writes,
@@ -41,6 +44,8 @@ not simultaneous operations on one handle. Low-level `Store` saves atomically up
 records but do not verify the caller's key or enforce session identity. Rotation cannot revoke
 keys already held in memory or old backups.
 
+## Restoration
+
 YAML restoration populates an empty destination; occupied stores (including password-only
 stores) are rejected instead of merged or replaced. `Store.import_yaml` validates encrypted
 record structure without a password. `Connection.init_from_yaml` additionally authenticates
@@ -49,6 +54,8 @@ the password and every secret before opening the destination. Empty exports use
 hashes remain readable. Installation uses one transaction. SQL failures close the internally
 opened handle and roll back all records; a newly initialized empty SQLite file is retained
 for inspection or retry. Failure cleanup never deletes destination files.
+
+## Backup files
 
 Backups read a coherent SQLite snapshot and serialize it before touching the output file.
 Export rejects database/sidecar destinations, hard-link aliases, symlinks, non-regular targets,
@@ -75,16 +82,17 @@ use of the product, where this Ruby script is vulnerable.
 
 ## Usage
 
-SecretStore requires Ruby 3.3 or newer.
+SecretStore requires Ruby 3.3 or newer and the dependencies in the committed Bundler lockfile.
+Install them with `bundle install` using your selected Ruby before launching the console.
 
 ### Command line console app (uses irb, with command history disabled)
 
     ./console [secrets_file]
 
-Uses command line argument, or value of ```SECRET_STORE_FILE``` environment variable, as location
-of SQLite database. You will be prompted for a password. For initial file, this sets the password
-in use. For existing file, the password must match (this is not the protection for the content,
-it is to ensure all key generation works from the same initial password).
+The explicit filename takes precedence over `SECRET_STORE_FILE`. If neither is supplied,
+the database defaults to `~/secrets.sqlite3.dat`. The password prompt establishes the master
+password for an empty store or verifies it for an existing store. New passwords require at
+least eight characters; existing stores retain their password compatibility.
 
 The wrapper uses the committed bundle and resolves application files relative to itself.
 Relative database paths remain relative to your working directory. User IRB startup RC
@@ -94,11 +102,12 @@ EOF raises `EOFError` before loading or changing a store, and terminal echo is r
 This does not erase in-memory values, hide typed Ruby commands or deliberate secret reads,
 or protect terminal scrollback. IRB remains an unrestricted Ruby session.
 
-This is just a Ruby ```irb``` session with a few added methods for managing secrets. The available
-methods are explained on successful start. All parameters should be Strings.
-
-You can place a variation of ```console``` with a different name e.g. ```secret_store``` on
-the path, and set ```SECRET_STORE_FILE``` in ```.bash_profile```.
+The console prints available helper methods on startup. Labels passed to helpers are converted
+to Strings; record constructors require String labels. `read_secret` returns nil for an absent
+label. Use `export_secrets 'backup.yml'` to export explicitly, or `export_secrets` to use
+`SECRET_EXPORT_FILE`, falling back to `~/secrets_export.yml`. Relative paths are relative to
+the caller's working directory. The console wrapper must remain in the checkout beside its
+`Gemfile`, `lib/`, and `bin/` directories; a shell alias can invoke it by its full path.
 
 ## License
 

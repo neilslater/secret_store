@@ -69,7 +69,7 @@ module SecretStore
 
   # Reads secret associated with given label.
   # @param [String] label identifier for the secret
-  # @return [String] plaintext value of the secret, as decrypted from the store
+  # @return [String,nil] decrypted plaintext, or nil when the label is absent
   #
   def read_secret(label)
     @connection.read_secret label.to_s
