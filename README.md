@@ -41,6 +41,15 @@ not simultaneous operations on one handle. Low-level `Store` saves atomically up
 records but do not verify the caller's key or enforce session identity. Rotation cannot revoke
 keys already held in memory or old backups.
 
+YAML restoration populates an empty destination; occupied stores (including password-only
+stores) are rejected instead of merged or replaced. `Store.import_yaml` validates encrypted
+record structure without a password. `Connection.init_from_yaml` additionally authenticates
+the password and every secret before opening the destination. Empty exports use
+`master_password: null` and `secrets: []` with the existing symbol keys; historical empty
+hashes remain readable. Installation uses one transaction. SQL failures close the internally
+opened handle and roll back all records; a newly initialized empty SQLite file is retained
+for inspection or retry. Failure cleanup never deletes destination files.
+
 ## Disclaimer
 
 This code has been created primarily for learning purposes.

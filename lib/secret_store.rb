@@ -8,6 +8,7 @@ require 'secret_store/record_validation'
 require 'secret_store/secret'
 require 'secret_store/password'
 require 'secret_store/store'
+require 'secret_store/restoration'
 require 'secret_store/connection'
 
 # Top-level methods in this module are imported into main Object in the console application. They

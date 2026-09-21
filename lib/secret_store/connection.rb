@@ -34,19 +34,22 @@ module SecretStore
       store = SecretStore::Store.new(filename)
       connection = new(store, password_text)
     ensure
-      store&.db&.close unless connection
+      store.db.close if store && !connection
     end
 
     # Creates new store by importing YAML file, then connecting to the resulting SQLite 3 database.
-    # If the password is incorrect, then the database is still created
+    # Authenticates every imported record before opening the destination; occupied stores are rejected.
     # @param [String] filename path to SQLite 3 database to be created
     # @param [String] password_text master password for the database, must match that in the YAML
     # @param [String] yaml_filename path to YAML backup of database
     # @return [SecretStore::Connection] connected database with password set for decryption
     #
     def self.init_from_yaml(filename, password_text, yaml_filename)
-      # TODO: Should we check password first, from the YAML?
-      new(SecretStore::Store.import_yaml(yaml_filename, filename), password_text)
+      archive = Restoration.read(yaml_filename).authenticate(password_text)
+      store = archive.restore(filename)
+      connection = new(store, password_text)
+    ensure
+      store.db.close if store && !connection
     end
 
     # Stores a secret securely in the database, over-writing any existing secret with the same label.

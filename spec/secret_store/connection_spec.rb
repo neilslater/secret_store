@@ -60,7 +60,7 @@ describe SecretStore::Connection do
         expect(connection.all_secret_labels).to match_array %w[example second]
       end
 
-      it 'fails to import and connect if the password is bad' do
+      it 'rejects the wrong password before importing' do
         expect do
           described_class.init_from_yaml(':memory:', 'wrong-password', yaml_fixture)
         end.to raise_error RuntimeError, /password/
