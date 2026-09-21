@@ -24,6 +24,13 @@ obtain the master password.
 There is no way to recover from a forgotten password - if that happens your secrets will
 become unreadable.
 
+Encrypted records require complete fields, valid URL-safe Base64, 16-byte PBKDF2 salts,
+and full 16-byte GCM authentication tags. Malformed records raise `SecretStore::FormatError`
+(a `RuntimeError`); structural validation alone does not authenticate data. Decryption
+must succeed with the key before plaintext is returned. Secret replacement leaves the
+original encrypted record unchanged if encryption fails. Writers retain the legacy
+16-byte stored IV representation and use its first 12 bytes as the GCM nonce.
+
 ## Disclaimer
 
 This code has been created primarily for learning purposes.

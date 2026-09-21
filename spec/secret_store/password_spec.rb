@@ -21,7 +21,7 @@ describe SecretStore::Password do
       it 'rejects PBKDF salts which are not 16 bytes' do
         expect do
           described_class.new(example_bcrypt_salt, Base64.urlsafe_encode64('short'), example_cipher)
-        end.to raise_error RuntimeError, /Unexpected size/
+        end.to raise_error RuntimeError, /pbkdf2_salt must contain 16 bytes/
       end
     end
 
