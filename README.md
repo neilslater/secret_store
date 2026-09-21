@@ -31,6 +31,16 @@ must succeed with the key before plaintext is returned. Secret replacement leave
 original encrypted record unchanged if encryption fails. Writers retain the legacy
 16-byte stored IV representation and use its first 12 bytes as the GCM nonce.
 
+Connection operations use SQLite transactions. Password rotation commits all encrypted
+records and the new password together, then publishes the new session key. Reads, writes,
+deletes, and rotations reject connections whose stored password record has changed; reconnect
+to continue. Initial password creation is serialized and rejects orphan secrets. Lock waits
+are bounded to five seconds (`SQLite3::BusyException` on timeout). Nested or caller-owned
+transactions are rejected before work; share a store through separate connections/handles,
+not simultaneous operations on one handle. Low-level `Store` saves atomically upsert encrypted
+records but do not verify the caller's key or enforce session identity. Rotation cannot revoke
+keys already held in memory or old backups.
+
 ## Disclaimer
 
 This code has been created primarily for learning purposes.

@@ -21,6 +21,7 @@ module SecretStore
     # @return [SecretStore::Store]
     def initialize(db_connect)
       @db = SQLite3::Database.new(db_connect)
+      @db.busy_timeout(5000)
       create_tables
     end
 
@@ -29,15 +30,11 @@ module SecretStore
     # @param [SecretStore::Password] password password object to be persisted
     # @return [nil]
     def save_password(password)
-      password_hash = password.to_h
-      existing = db.execute('SELECT bcrypt_salt FROM master_password WHERE id = 1')
-      if existing.empty?
-        db.execute('INSERT INTO master_password (id, bcrypt_salt, pbkdf2_salt, test_encryption) VALUES ( 1, ?, ?, ? )',
-                   hash_to_array(password_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
-      else
-        db.execute('UPDATE master_password SET bcrypt_salt=?, pbkdf2_salt=?, test_encryption=? WHERE id=1',
-                   hash_to_array(password_hash, %i[bcrypt_salt pbkdf2_salt test_encryption]))
-      end
+      db.execute(<<~SQL, password.to_h.values_at(:bcrypt_salt, :pbkdf2_salt, :test_encryption))
+        INSERT INTO master_password (id, bcrypt_salt, pbkdf2_salt, test_encryption) VALUES (1, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET bcrypt_salt=excluded.bcrypt_salt,
+          pbkdf2_salt=excluded.pbkdf2_salt, test_encryption=excluded.test_encryption
+      SQL
       nil
     end
 
@@ -53,9 +50,11 @@ module SecretStore
     # @param [SecretStore::Secret] secret object to be persisted
     # @return [nil]
     def save_secret(secret)
-      secret_hash = secret.to_h
-      existing = db.execute('SELECT label FROM secret WHERE label = ?', [secret_hash[:label]])
-      existing.empty? ? insert_secret(secret_hash) : update_secret(secret_hash)
+      db.execute(<<~SQL, secret.to_h.values_at(:label, :iv, :pbkdf2_salt, :crypted_text, :auth_tag))
+        INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)
+        ON CONFLICT(label) DO UPDATE SET iv=excluded.iv, pbkdf2_salt=excluded.pbkdf2_salt,
+          crypted_text=excluded.crypted_text, auth_tag=excluded.auth_tag
+      SQL
       nil
     end
 
@@ -120,24 +119,28 @@ module SecretStore
       end
     end
 
-    private
+    # Run an owned transaction, rolling back on errors, interruption, or failed commit.
+    # Caller-owned/nested transactions are rejected; only the outer commit can publish session state.
+    # @param [Symbol] mode SQLite transaction mode (:immediate for writes, :deferred for reads)
+    # @yield work performed inside the transaction
+    # @return [Object] the block result after a successful commit
+    def transaction(mode = :immediate)
+      raise 'Nested transactions are not supported' if db.transaction_active?
 
-    def hash_to_array(hash, keys)
-      keys.map { |k| hash[k] }
+      db.transaction(mode)
+      begin
+        result = yield
+        db.commit
+        result
+      ensure
+        db.rollback if db.transaction_active?
+      end
     end
+
+    private
 
     def array_to_hash(array, keys)
       keys.zip(array).to_h
-    end
-
-    def insert_secret(secret_hash)
-      db.execute('INSERT INTO secret (label,iv,pbkdf2_salt,crypted_text,auth_tag) VALUES (?,?,?,?,?)',
-                 hash_to_array(secret_hash, %i[label iv pbkdf2_salt crypted_text auth_tag]))
-    end
-
-    def update_secret(secret_hash)
-      db.execute('UPDATE secret SET iv=?, pbkdf2_salt=?, crypted_text=?, auth_tag=? WHERE label=?',
-                 hash_to_array(secret_hash, %i[iv pbkdf2_salt crypted_text auth_tag label]))
     end
 
     def create_tables
