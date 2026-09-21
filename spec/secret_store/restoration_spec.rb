@@ -163,7 +163,7 @@ describe SecretStore::Restoration do
     it 'propagates an invalid destination error without leaking a handle' do
       write_archive
       expect { described_class.read(yaml_path).restore(File.join(directory, 'missing', 'file')) }
-        .to raise_error(SQLite3::CantOpenException)
+        .to raise_error(Errno::ENOENT)
     end
 
     it 'closes a handle whose schema initialization fails' do

@@ -17,9 +17,10 @@ module SecretStore
 
     # Connects to database, creating database files and/or tables as required to make the store
     # valid.
-    # @param [String] db_connect SQLite connection string, usually just path to file name
+    # @param [String,Pathname] db_connect ordinary filename, :memory:, or empty string for a temporary database
     # @return [SecretStore::Store]
     def initialize(db_connect)
+      DatabaseFile.prepare(db_connect)
       @db = SQLite3::Database.new(db_connect)
       @db.busy_timeout(5000)
       create_tables
@@ -78,19 +79,13 @@ module SecretStore
       nil
     end
 
-    # Creates a dump of encrypted and hashed data as a YAML file. This is a form of backup of the
-    # crypted data and is equally secure as the original store, in terms of secrecy of the encryption
-    # at rest.
+    # Export one coherent encrypted snapshot to a private file using atomic replacement.
+    # Rejects database/sidecar aliases, symlink targets, and non-regular or foreign-owned targets.
+    # Labels and encryption metadata remain readable; old backups retain their original password.
     # @param [String] yaml_file path of file to write
     # @return [nil]
     def export_yaml(yaml_file)
-      pw = load_password
-      secrets = all_secrets
-      all_data = { master_password: pw&.to_h,
-                   secrets: secrets.map(&:to_h) }
-
-      File.open(yaml_file, 'wb') { |f| f.puts YAML.dump(all_data) }
-      nil
+      BackupFile.new(self, yaml_file).write
     end
 
     # Restore structurally validated encrypted data into an empty destination.

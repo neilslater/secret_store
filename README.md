@@ -50,6 +50,20 @@ hashes remain readable. Installation uses one transaction. SQL failures close th
 opened handle and roll back all records; a newly initialized empty SQLite file is retained
 for inspection or retry. Failure cleanup never deletes destination files.
 
+Backups read a coherent SQLite snapshot and serialize it before touching the output file.
+Export rejects database/sidecar destinations, hard-link aliases, symlinks, non-regular targets,
+and targets owned by another user. Complete backups are published by same-directory atomic
+rename from an exclusively created `0600` temporary file, after flush, file fsync, and close.
+Ordinary write/close/rename failures preserve the old backup and remove the temporary file.
+Directory fsync and universal power-loss durability are not promised. Use directories you
+control; pathname checks do not defend against a hostile process replacing directory entries.
+
+New file-backed databases use exclusive creation with mode `0600`, without changing the
+process umask. Pre-existing database permissions are preserved; review and restrict broad
+permissions yourself if appropriate. Normal filenames (including `Pathname`), `:memory:`,
+and an empty filename for SQLite temporary databases are supported. SQLite `file:` URI
+connection strings are explicitly rejected; use an ordinary filename instead.
+
 ## Disclaimer
 
 This code has been created primarily for learning purposes.
